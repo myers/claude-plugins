@@ -1,0 +1,21 @@
+{
+  "name": "myers-plugins",
+  "owner": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  },
+  "plugins": [
+    {
+      "name": "android-logcat",
+      "source": "./skills/android-logcat",
+      "description": "Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs.",
+      "keywords": ["android", "logcat", "quest", "debugging", "vr"]
+    },
+    {
+      "name": "cdp-quest-dev",
+      "source": "./skills/cdp-quest-dev",
+      "description": "Chrome DevTools Protocol debugging for Quest. Use cdp-cli and quest-dev to inspect, control, and debug browsers on Meta Quest.",
+      "keywords": ["cdp", "chrome", "quest", "debugging", "webxr", "vr"]
+    }
+  ]
+}
