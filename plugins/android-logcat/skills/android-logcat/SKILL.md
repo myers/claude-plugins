@@ -12,18 +12,26 @@ Android logcat uses a **ring buffer that fills extremely quickly on Meta Quest**
 
 **NEVER** try to read logcat after a crash. **ALWAYS** capture to a file before testing.
 
+## Required: Use the Helper Script
+
+**YOU MUST use the capture_logcat.sh helper script** - it handles buffer clearing, PID tracking, and file management correctly.
+
+First, find the script location:
+```bash
+# Find the installed script
+LOGCAT_SCRIPT=$(find ~/.claude -name "capture_logcat.sh" -path "*/android-logcat/*" 2>/dev/null | head -1)
+echo "Script: $LOGCAT_SCRIPT"
+```
+
 ## Workflow
 
 ### 1. Start Capture BEFORE Testing
 
 ```bash
-# Using the helper script (logs to ./logs/logcat/ in current workspace)
-.claude/skills/android-logcat/scripts/capture_logcat.sh start
-
-# Or manually
-mkdir -p logs/logcat
-adb logcat -c && adb logcat -v threadtime > logs/logcat/logcat_$(date +%Y%m%d_%H%M%S).txt &
+$LOGCAT_SCRIPT start
 ```
+
+This clears the ring buffer and starts capturing to `./logs/logcat/` with a timestamped filename.
 
 ### 2. Run Your Test
 
@@ -32,11 +40,10 @@ Install APK, reproduce the crash, etc.
 ### 3. Stop Capture
 
 ```bash
-# Using helper script
-.claude/skills/android-logcat/scripts/capture_logcat.sh stop
-
-# Or manually: kill the background adb process
+$LOGCAT_SCRIPT stop
 ```
+
+Shows the log file path, size, and line count.
 
 ### 4. Analyze the Captured File
 
@@ -51,15 +58,14 @@ grep -iE "openxr|webxr|xrdevice|vr" logs/logcat/*.txt
 grep -E "cr_" logs/logcat/*.txt
 ```
 
-## Helper Script Commands
+## Script Commands Reference
 
 ```bash
-SCRIPT=".claude/skills/android-logcat/scripts/capture_logcat.sh"
-
-$SCRIPT start          # Start capturing (clears buffer first)
-$SCRIPT start "*:W"    # Capture warnings and above only
-$SCRIPT stop           # Stop capturing
-$SCRIPT status         # Check if capturing, show latest file
+$LOGCAT_SCRIPT start          # Start capturing (clears buffer first)
+$LOGCAT_SCRIPT start "*:W"    # Capture warnings and above only
+$LOGCAT_SCRIPT stop           # Stop capturing
+$LOGCAT_SCRIPT status         # Check if capturing, show latest file
+$LOGCAT_SCRIPT tail           # Live tail of current capture
 ```
 
 Log files are saved to `./logs/logcat/` in the current workspace with timestamps.
