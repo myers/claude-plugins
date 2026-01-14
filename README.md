@@ -35,3 +35,25 @@ Chrome DevTools Protocol debugging for Quest. Use `cdp-cli` and `quest-dev` to i
 - Support for both Quest browser and custom Chromium builds
 - Commands: tabs, console, eval, screenshot, network, click, fill
 - WebXR debugging workflows
+
+## Repository Structure
+
+```
+claude-plugins/
+├── .claude-plugin/
+│   └── marketplace.json        # Marketplace definition
+├── plugins/
+│   ├── android-logcat/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json     # Plugin manifest
+│   │   └── skills/
+│   │       └── android-logcat/
+│   │           └── SKILL.md
+│   └── cdp-quest-dev/
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       └── skills/
+│           └── cdp-quest-dev/
+│               └── SKILL.md
+└── README.md
+```

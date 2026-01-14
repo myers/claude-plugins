@@ -1,0 +1,9 @@
+{
+  "name": "cdp-quest-dev",
+  "description": "Chrome DevTools Protocol debugging for Quest. Use cdp-cli and quest-dev to inspect, control, and debug browsers on Meta Quest.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
