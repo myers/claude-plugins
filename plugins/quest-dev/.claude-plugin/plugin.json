@@ -1,0 +1,9 @@
+{
+  "name": "quest-dev",
+  "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
