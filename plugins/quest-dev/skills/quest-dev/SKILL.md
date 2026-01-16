@@ -209,6 +209,14 @@ claude -c
 **Can't start (already running)?**
 - Another instance is active: `kill $(cat ~/.quest-dev-stay-awake.pid)`
 
+**Proximity sensor stuck after crashes?**
+If stay-awake crashes or is killed without cleanup, manually restore with:
+```bash
+adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable
+adb shell settings put system screen_off_timeout 30000
+```
+Note: `automation_disable` actually RE-ENABLES normal proximity sensor behavior (counterintuitive naming).
+
 ---
 
 ## 5. Logcat Capture
