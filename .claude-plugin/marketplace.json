@@ -16,6 +16,18 @@
       "source": "./plugins/cdp-quest-dev",
       "description": "Chrome DevTools Protocol debugging for Quest. Use cdp-cli and quest-dev to inspect, control, and debug browsers on Meta Quest.",
       "keywords": ["cdp", "chrome", "quest", "debugging", "webxr", "vr"]
+    },
+    {
+      "name": "find-block",
+      "source": "./plugins/find-block",
+      "description": "Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead.",
+      "keywords": ["hooks", "bash", "find", "glob", "grep"]
+    },
+    {
+      "name": "quest-dev",
+      "source": "./plugins/quest-dev",
+      "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
+      "keywords": ["quest", "vr", "stay-awake", "hooks"]
     }
   ]
 }
