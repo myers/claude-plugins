@@ -1,0 +1,9 @@
+{
+  "name": "find-block",
+  "description": "Blocks the 'find' command in Bash tool and suggests using Glob/Grep tools instead, which are optimized for Claude Code.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
