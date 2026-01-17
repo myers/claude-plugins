@@ -1,4 +1,5 @@
 {
+  "description": "Security hook that blocks the find command and suggests using Glob/Grep tools instead",
   "hooks": {
     "PreToolUse": [
       {
@@ -6,7 +7,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $PLUGIN_DIR/hooks/scripts/block-find.sh"
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-find.sh",
+            "timeout": 10
           }
         ]
       }
