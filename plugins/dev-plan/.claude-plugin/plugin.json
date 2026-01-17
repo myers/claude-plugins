@@ -1,7 +1,7 @@
 {
   "name": "dev-plan",
   "description": "Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
