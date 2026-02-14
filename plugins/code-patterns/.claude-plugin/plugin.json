@@ -1,0 +1,9 @@
+{
+  "name": "code-patterns",
+  "description": "Opinionated code patterns and conventions for Django projects. Provides reference material for writing and reviewing code against established conventions.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}

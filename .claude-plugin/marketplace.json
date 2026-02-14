@@ -40,6 +40,12 @@
       "source": "./plugins/fj",
       "description": "Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories.",
       "keywords": ["forgejo", "gitea", "issues", "pr", "kanban", "cli"]
+    },
+    {
+      "name": "code-patterns",
+      "source": "./plugins/code-patterns",
+      "description": "Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions.",
+      "keywords": ["django", "python", "patterns", "conventions", "code-review"]
     }
   ]
 }
