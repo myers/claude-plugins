@@ -34,6 +34,12 @@
       "source": "./plugins/dev-plan",
       "description": "Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans.",
       "keywords": ["planning", "commands", "interview", "opus"]
+    },
+    {
+      "name": "fj",
+      "source": "./plugins/fj",
+      "description": "Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories.",
+      "keywords": ["forgejo", "gitea", "issues", "pr", "kanban", "cli"]
     }
   ]
 }
