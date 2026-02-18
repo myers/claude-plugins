@@ -46,6 +46,12 @@
       "source": "./plugins/code-patterns",
       "description": "Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions.",
       "keywords": ["django", "python", "patterns", "conventions", "code-review"]
+    },
+    {
+      "name": "woodpecker-cli",
+      "source": "./plugins/woodpecker-cli",
+      "description": "Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution.",
+      "keywords": ["woodpecker", "ci", "cd", "pipelines", "deploy", "cli"]
     }
   ]
 }
