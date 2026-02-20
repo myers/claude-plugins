@@ -1,7 +1,7 @@
 {
   "name": "fj",
   "description": "Forgejo CLI (fj) skill for managing issues, pull requests, and project boards. Use when working with Forgejo repositories.",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"

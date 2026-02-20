@@ -1,7 +1,7 @@
 {
   "name": "woodpecker-cli",
   "description": "Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution. Use when working with Woodpecker CI.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
