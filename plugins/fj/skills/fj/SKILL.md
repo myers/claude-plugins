@@ -21,21 +21,17 @@ Read the relevant topic file(s) based on what the agent needs to do:
 
 ### The `-R` flag goes AFTER the subcommand group
 
+`-R` selects which git remote to use. It belongs on the parent command (`fj issue`, `fj pr`, `fj project`), NOT on `fj` itself or on the leaf subcommand:
+
 ```bash
 # CORRECT
 fj issue -R origin view 11
-fj pr -R origin view 5
+fj pr -R origin search -s open
+fj project -R origin board
 
 # WRONG
 fj -R origin issue view 11
-```
-
-### `fj project` subcommands do NOT accept `-R`
-
-Use `-r owner/repo` instead:
-```bash
-fj project board -r owner/repo
-fj project status 11 -r owner/repo
+fj pr search -R origin -s open
 ```
 
 ### `body` is a subcommand, not a flag
@@ -43,17 +39,23 @@ fj project status 11 -r owner/repo
 ```bash
 # CORRECT - editing issue body
 fj issue edit 11 body "new content"
-fj issue edit 11 body --body-file /path/to/file.md
 
 # WRONG
 fj issue edit 11 --body "new content"
 ```
 
-### Use `--body-file` for multiline content
+### `--body-file` is only on `create` and `comment`, NOT on `edit body`
 
-When the content is more than a line or two, write it to a file first:
 ```bash
-fj issue edit 11 body --body-file /path/to/body.md
+# CORRECT — create and comment support --body-file
+fj issue create "Title" --body-file /path/to/body.md
+fj issue comment 11 --body-file /path/to/body.md
+
+# WRONG — edit body does NOT have --body-file
+fj issue edit 11 body --body-file /path/to/body.md   # Will fail!
+
+# Instead, read the file content and pass it as a positional arg
+fj issue edit 11 body "$(cat /path/to/body.md)"
 ```
 
 ### `fj project add` is buggy
@@ -65,4 +67,5 @@ fj issue edit 11 body --body-file /path/to/body.md
 ```bash
 fj whoami          # Check current user
 fj auth login      # Authenticate
+fj auth list       # List logged-in instances
 ```
