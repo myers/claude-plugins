@@ -26,18 +26,20 @@ woodpecker-cli admin org ls
 
 ## Global Secrets
 
-Secrets available to all repos:
+Secrets available to all repos. Uses `--name`/`--value` flags, not positional args.
+
 ```bash
 woodpecker-cli admin secret ls
-woodpecker-cli admin secret add <name> <value>
-woodpecker-cli admin secret rm <name>
+woodpecker-cli admin secret add --name MY_SECRET --value "secret-value"
+woodpecker-cli admin secret rm --name MY_SECRET
 ```
 
 ## Global Registries
 
-Docker registries available to all repos:
+Docker registries available to all repos. Uses `--hostname`/`--username`/`--password` flags.
+
 ```bash
 woodpecker-cli admin registry ls
-woodpecker-cli admin registry add <address> <username> <password>
-woodpecker-cli admin registry rm <address>
+woodpecker-cli admin registry add --hostname registry.example.com --username user --password pass
+woodpecker-cli admin registry rm --hostname registry.example.com
 ```

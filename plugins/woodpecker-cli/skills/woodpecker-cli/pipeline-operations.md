@@ -22,6 +22,12 @@ woodpecker-cli pipeline start owner/repo <pipeline-number> -p KEY=value
 woodpecker-cli pipeline stop owner/repo <pipeline-number>
 ```
 
+## Kill a Pipeline (Force)
+
+```bash
+woodpecker-cli pipeline kill owner/repo <pipeline-number>
+```
+
 ## Deploy
 
 Trigger a deployment event:
@@ -43,6 +49,10 @@ woodpecker-cli pipeline decline owner/repo <pipeline-number>
 
 ```bash
 woodpecker-cli pipeline purge owner/repo
+woodpecker-cli pipeline purge owner/repo --older-than 720h   # Older than 30 days
+woodpecker-cli pipeline purge owner/repo --keep-min 20       # Keep at least 20 (default: 10)
+woodpecker-cli pipeline purge owner/repo --branch main       # Only purge this branch
+woodpecker-cli pipeline purge owner/repo --dry-run           # Preview what would be deleted
 ```
 
 ## Purge Logs

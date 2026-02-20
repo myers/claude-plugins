@@ -30,7 +30,10 @@ woodpecker-cli pipeline last owner/repo --branch main
 
 ```bash
 woodpecker-cli pipeline log show owner/repo <pipeline-number>
+woodpecker-cli pipeline log show owner/repo <pipeline-number> <step-number|step-name>
 ```
+
+Step numbers start at 2 (step 1 is internal). You can also use step names like `clone`, `build`, etc.
 
 ## View Pipeline Steps
 

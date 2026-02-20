@@ -23,47 +23,72 @@ woodpecker-cli repo update owner/repo --require-approval "forks"
 
 ## Secrets
 
+All secret commands use `--name` and `--value` flags, NOT positional arguments.
+
 ```bash
 # List
 woodpecker-cli repo secret ls owner/repo
 
 # Show
-woodpecker-cli repo secret show owner/repo <name>
+woodpecker-cli repo secret show owner/repo --name MY_SECRET
 
 # Add
-woodpecker-cli repo secret add owner/repo <name> <value>
+woodpecker-cli repo secret add owner/repo --name MY_SECRET --value "secret-value"
+woodpecker-cli repo secret add owner/repo --name MY_SECRET --value "val" --event push --event tag
 
 # Update
-woodpecker-cli repo secret update owner/repo <name> <value>
+woodpecker-cli repo secret update owner/repo --name MY_SECRET --value "new-value"
 
 # Remove
-woodpecker-cli repo secret rm owner/repo <name>
+woodpecker-cli repo secret rm owner/repo --name MY_SECRET
 ```
 
 Organization-level secrets:
 ```bash
-woodpecker-cli org secret ls <org>
-woodpecker-cli org secret add <org> <name> <value>
+woodpecker-cli org secret ls --org myorg
+woodpecker-cli org secret add --org myorg --name MY_SECRET --value "secret-value"
 ```
 
 ## Registries (Docker Auth)
 
+Registry commands use `--hostname`, `--username`, `--password` flags.
+
 ```bash
+# List
 woodpecker-cli repo registry ls owner/repo
-woodpecker-cli repo registry add owner/repo <address> <username> <password>
-woodpecker-cli repo registry update owner/repo <address> <username> <password>
-woodpecker-cli repo registry rm owner/repo <address>
-woodpecker-cli repo registry show owner/repo <address>
+
+# Show
+woodpecker-cli repo registry show owner/repo --hostname registry.example.com
+
+# Add
+woodpecker-cli repo registry add owner/repo --hostname registry.example.com --username user --password pass
+
+# Update
+woodpecker-cli repo registry update owner/repo --hostname registry.example.com --username user --password newpass
+
+# Remove
+woodpecker-cli repo registry rm owner/repo --hostname registry.example.com
 ```
 
 ## Cron Jobs
 
+Cron commands use `--name`, `--branch`, `--schedule`, and `--id` flags.
+
 ```bash
+# List
 woodpecker-cli repo cron ls owner/repo
-woodpecker-cli repo cron show owner/repo <cron-id>
-woodpecker-cli repo cron add owner/repo <name> <schedule> <branch>
-woodpecker-cli repo cron update owner/repo <cron-id> --name "nightly" --schedule "0 0 * * *"
-woodpecker-cli repo cron rm owner/repo <cron-id>
+
+# Show
+woodpecker-cli repo cron show owner/repo --id 5
+
+# Add
+woodpecker-cli repo cron add owner/repo --name "nightly" --branch main --schedule "0 0 * * *"
+
+# Update
+woodpecker-cli repo cron update owner/repo --id 5 --name "nightly" --schedule "0 2 * * *"
+
+# Remove
+woodpecker-cli repo cron rm owner/repo --id 5
 ```
 
 ## Other Operations
