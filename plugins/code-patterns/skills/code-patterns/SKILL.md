@@ -1,12 +1,12 @@
 ---
 name: code-patterns
-description: Load opinionated code patterns and conventions for writing and reviewing Django project code
+description: Load opinionated code patterns and conventions for writing and reviewing code
 allowed-tools: Glob, Read
 ---
 
 # Code Patterns
 
-Load and apply the project's opinionated code patterns and conventions.
+Load and apply opinionated code patterns and conventions.
 
 ## Loading Instructions
 
@@ -29,7 +29,7 @@ When reviewing code, flag deviations from these patterns as suggestions. Explain
 
 ## Key Opinions (Quick Reference)
 
-1. **PostgreSQL only** — No SQLite support, enforced in settings
+1. **SQLite first, PostgreSQL when needed** — Start with SQLite for simplicity; upgrade to PostgreSQL when you need advanced features
 2. **uv for package management** — Not pip, poetry, or pipenv
 3. **Function-based views** — Simpler than class-based views
 4. **Composable filter functions** — Not Django Filter or custom filter classes
@@ -41,7 +41,7 @@ When reviewing code, flag deviations from these patterns as suggestions. Explain
 10. **Raw SQL when beneficial** — Don't fight the ORM for complex queries
 11. **Connection pooling** — psycopg pool, not CONN_MAX_AGE
 12. **Ruff for linting and formatting** — Not black, isort, flake8 separately
-13. **Pre-commit hooks** — Enforce quality on every commit
+13. **prek for pre-commit hooks** — Enforce quality on every commit
 14. **Vite for assets** — Not webpack or Django's built-in static
 15. **Hotwired for frontend** — Not React/Vue SPA
 16. **Management commands as orchestrators** — Parse args, display output, delegate logic

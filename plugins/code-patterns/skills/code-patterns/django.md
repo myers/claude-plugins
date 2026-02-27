@@ -64,16 +64,25 @@ else:
     DEBUG = False
 ```
 
-### PostgreSQL-Only
+### Database Selection
 
-Enforce PostgreSQL as the only supported database:
+Start with SQLite — it's zero-config and ships with Django:
 
 ```python
-if not os.environ.get("DATABASE_URL"):
-    raise RuntimeError(
-        "DATABASE_URL environment variable is required. "
-        "This project only supports PostgreSQL."
-    )
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}
+```
+
+Upgrade to PostgreSQL when you need features like full-text search, LATERAL joins, connection pooling, concurrent writes, or advisory locks. Use `DATABASE_URL` to switch:
+
+```python
+if os.environ.get("DATABASE_URL"):
+    import dj_database_url
+    DATABASES = {"default": dj_database_url.config()}
 ```
 
 ### Long Session Cookies

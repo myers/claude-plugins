@@ -1,11 +1,11 @@
 # Database Patterns
 
-## Connection Pooling
+## Connection Pooling (PostgreSQL)
 
-Use psycopg's built-in connection pooling instead of Django's `CONN_MAX_AGE`:
+When using PostgreSQL, use psycopg's built-in connection pooling instead of Django's `CONN_MAX_AGE`:
 
 ```python
-# Enable psycopg connection pooling
+# Enable psycopg connection pooling (PostgreSQL only — not needed with SQLite)
 if db_from_env.get("ENGINE") == "django.db.backends.postgresql":
     db_from_env["OPTIONS"] = db_from_env.get("OPTIONS", {})
     db_from_env["OPTIONS"]["pool"] = True

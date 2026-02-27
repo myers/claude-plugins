@@ -74,26 +74,30 @@ ignore = [
 "**/migrations/**" = ["E501", "F401"]
 ```
 
-### Pre-commit Hooks
+### Pre-commit Hooks (prek)
 
-```yaml
-# .pre-commit-config.yaml
-repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-      - id: check-merge-conflict
+Use [prek](https://github.com/j178/prek) instead of pre-commit — it's a faster Rust reimplementation with native TOML config:
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.8
-    hooks:
-      - id: ruff-format
-      - id: ruff-check
-        args: [--fix]
+```toml
+# prek.toml
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml" },
+  { id = "check-added-large-files" },
+  { id = "check-merge-conflict" },
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.12.8"
+hooks = [
+  { id = "ruff-format" },
+  { id = "ruff-check", args = ["--fix"] },
+]
 ```
 
 ---
@@ -129,7 +133,7 @@ exec uv run pytest -n auto "$@"
 
 ### Docker Compose for Services
 
-Run PostgreSQL and other services via Docker:
+When you've graduated to PostgreSQL, run it via Docker:
 
 ```yaml
 services:
