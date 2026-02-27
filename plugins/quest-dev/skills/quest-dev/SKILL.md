@@ -348,6 +348,10 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 
 ---
 
+## See Also
+
+**cdp-cli** plugin — General-purpose Chrome DevTools Protocol CLI for inspecting, controlling, and debugging any CDP-compatible browser. Use after `quest-dev open` to interact with pages via console, eval, screenshot, network, click, and fill commands.
+
 ## Tips
 
 1. **Always run stay-awake**: Quest sleeping mid-test is frustrating

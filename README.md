@@ -1,59 +1,91 @@
 # Myers Plugins
 
-A Claude Code plugin marketplace with tools for Meta Quest and Android development.
+A Claude Code plugin marketplace.
 
 ## Installation
 
+Add the marketplace, then install individual plugins:
+
 ```
 /plugin marketplace add myers/claude-plugins
+/plugin install <name>@myers-plugins
 ```
 
 ## Plugins
 
+| Plugin | Description |
+|--------|-------------|
+| [android-logcat](#android-logcat) | Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs. |
+| [cdp-cli](#cdp-cli) | Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP. |
+| [code-patterns](#code-patterns) | Load opinionated code patterns and conventions for writing and reviewing code. |
+| [dev-plan](#dev-plan) | Interactive planning with in-depth requirements interview. |
+| [find-block](#find-block) | Blocks the 'find' command in Bash tool and suggests using Glob/Grep tools instead. |
+| [fj](#fj) | Forgejo CLI for managing issues, PRs, and project boards. Use when asked to interact with Forgejo repositories. |
+| [quest-dev](#quest-dev) | Meta Quest development toolkit. Use for Quest browser debugging, screenshots, battery monitoring, and keeping Quest awake during development. |
+| [woodpecker-cli](#woodpecker-cli) | Woodpecker CI CLI for managing pipelines, repos, secrets, and running local builds. |
+
+---
+
 ### android-logcat
 
-Captures and analyzes Android logcat for Quest/Android debugging. Handles Android's ring buffer limitation that fills in seconds on Meta Quest.
+Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs. CRITICAL — always capture logs to files before testing, never rely on reading the buffer after a crash.
 
 ```
 /plugin install android-logcat@myers-plugins
 ```
 
-**Key features:**
-- Continuous file-based log capture to prevent data loss
-- Helper script for start/stop/status commands
-- Common analysis patterns for crashes, ANRs, and OpenXR errors
+### cdp-cli
 
-### cdp-quest-dev
-
-Chrome DevTools Protocol debugging for Quest. Use `cdp-cli` and `quest-dev` to inspect, control, and debug browsers on Meta Quest.
+Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP. Works with any CDP-compatible browser: desktop Chrome, headless Chrome, Chromium, or Quest Browser.
 
 ```
-/plugin install cdp-quest-dev@myers-plugins
+/plugin install cdp-cli@myers-plugins
 ```
 
-**Key features:**
-- Support for both Quest browser and custom Chromium builds
-- Commands: tabs, console, eval, screenshot, network, click, fill
-- WebXR debugging workflows
+### code-patterns
 
-## Repository Structure
+Load opinionated code patterns and conventions for writing and reviewing code.
 
 ```
-claude-plugins/
-├── .claude-plugin/
-│   └── marketplace.json        # Marketplace definition
-├── plugins/
-│   ├── android-logcat/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json     # Plugin manifest
-│   │   └── skills/
-│   │       └── android-logcat/
-│   │           └── SKILL.md
-│   └── cdp-quest-dev/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       └── skills/
-│           └── cdp-quest-dev/
-│               └── SKILL.md
-└── README.md
+/plugin install code-patterns@myers-plugins
+```
+
+### dev-plan
+
+Interactive planning with in-depth requirements interview.
+
+```
+/plugin install dev-plan@myers-plugins
+```
+
+### find-block
+
+Blocks the `find` command in Bash tool and suggests using Glob/Grep tools instead, which are optimized for Claude Code. Hook-only plugin (no skill file).
+
+```
+/plugin install find-block@myers-plugins
+```
+
+### fj
+
+Forgejo CLI for managing issues, PRs, and project boards. Use when asked to interact with Forgejo repositories — creating issues, viewing PRs, managing kanban boards, etc.
+
+```
+/plugin install fj@myers-plugins
+```
+
+### quest-dev
+
+Meta Quest development toolkit. Use for Quest browser debugging, screenshots, battery monitoring, and keeping Quest awake during development. Provides CDP debugging, ADB utilities, and workflow automation.
+
+```
+/plugin install quest-dev@myers-plugins
+```
+
+### woodpecker-cli
+
+Woodpecker CI CLI for managing pipelines, repos, secrets, and running local builds. Use when asked to interact with Woodpecker CI.
+
+```
+/plugin install woodpecker-cli@myers-plugins
 ```

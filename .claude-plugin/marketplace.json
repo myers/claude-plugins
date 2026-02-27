@@ -12,10 +12,10 @@
       "keywords": ["android", "logcat", "quest", "debugging", "vr"]
     },
     {
-      "name": "cdp-quest-dev",
-      "source": "./plugins/cdp-quest-dev",
-      "description": "Chrome DevTools Protocol debugging for Quest. Use cdp-cli and quest-dev to inspect, control, and debug browsers on Meta Quest.",
-      "keywords": ["cdp", "chrome", "quest", "debugging", "webxr", "vr"]
+      "name": "cdp-cli",
+      "source": "./plugins/cdp-cli",
+      "description": "Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP.",
+      "keywords": ["cdp", "chrome", "devtools", "debugging", "browser"]
     },
     {
       "name": "find-block",

@@ -1,0 +1,9 @@
+{
+  "name": "cdp-cli",
+  "description": "Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP.",
+  "version": "2.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
