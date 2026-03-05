@@ -19,10 +19,12 @@ Automatically keeps Quest awake during active Claude Code sessions by sending SI
 
 ## How It Works
 
-1. **Start stay-awake**: Run `quest-dev stay-awake` in your terminal (default 5-minute idle timeout)
-2. **Work normally**: As you use Claude Code and tools execute, the hook automatically resets the timer
-3. **Auto-sleep**: After 5 minutes of inactivity (no tool executions), Quest automatically restores screen timeout
-4. **Manual exit**: Press Ctrl-C in the stay-awake terminal to immediately restore settings
+1. **Start stay-awake**: Run `quest-dev stay-awake` (reads PIN from `.quest-dev.json` or `~/.config/quest-dev/config.json`)
+2. **Disables autosleep, guardian, and system dialogs** on Quest
+3. **Battery monitoring**: Logs battery at 5% intervals, auto-exits at 10% (configurable)
+4. **Work normally**: As you use Claude Code and tools execute, the hook automatically resets the idle timer
+5. **Auto-restore**: After 5 minutes of inactivity, Quest automatically restores all settings
+6. **Manual exit**: Press Ctrl-C to immediately restore settings
 
 ## Architecture
 
@@ -39,23 +41,40 @@ The hook:
 
 ## Requirements
 
-- `quest-dev` CLI installed with stay-awake command
+- `quest-dev` CLI v1.3.0+
 - Quest device connected via ADB
+- Quest OS v44+
+- Meta Store PIN configured
 - Claude Code with plugin support
 
 ## Configuration
 
-The idle timeout can be customized when starting stay-awake:
+Create `.quest-dev.json` in your project root (or `~/.config/quest-dev/config.json`):
+
+```json
+{ "pin": "1234" }
+```
+
+Options when starting stay-awake:
 
 ```bash
-# Default: 5 minutes
+# Default: uses PIN from config, 5-minute idle timeout, 10% battery exit
 quest-dev stay-awake
 
-# Custom timeout: 10 minutes
+# Explicit PIN
+quest-dev stay-awake --pin 1234
+
+# Custom idle timeout: 10 minutes
 quest-dev stay-awake --idle-timeout 600000
 
-# Short timeout for testing: 10 seconds
-quest-dev stay-awake -i 10000
+# Custom low battery threshold
+quest-dev stay-awake --low-battery 20
+
+# Check current state
+quest-dev stay-awake --status
+
+# Manual restore after unexpected kill
+quest-dev stay-awake --disable --pin 1234
 ```
 
 ## Troubleshooting
@@ -64,6 +83,10 @@ quest-dev stay-awake -i 10000
 - Check if stay-awake process is running: `ps aux | grep stay-awake`
 - Verify PID file exists: `cat ~/.quest-dev-stay-awake.pid`
 - Test signal manually: `kill -USR1 $(cat ~/.quest-dev-stay-awake.pid)`
+- Check property state: `quest-dev stay-awake --status`
+
+**Settings stuck after crash?**
+- Restore manually: `quest-dev stay-awake --disable --pin 1234`
 
 **Hook not working?**
 - Verify plugin is installed in Claude Code

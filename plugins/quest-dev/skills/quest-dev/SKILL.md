@@ -135,54 +135,77 @@ quest-dev battery
 ### Output Format
 
 ```
-Battery: 87% (not charging)
-Battery: 42% (charging)
-Battery: 95% (fast charging)
+87% not charging
+42% charging
+95% fast charging
 ```
 
-**Use Case**: Check battery before long testing sessions, monitor charging status.
+**Use Case**: Quick battery check. For continuous monitoring, `quest-dev stay-awake` automatically reports battery at 5% intervals.
 
 ---
 
 ## 4. Stay Awake (Critical for Development)
 
-**Keeps Quest screen awake during active development sessions with automatic idle timeout.**
+**Keeps Quest awake during active development sessions. Disables autosleep, guardian boundary, and system dialogs. Monitors battery and auto-exits on low charge.**
 
 ```bash
-quest-dev stay-awake [--idle-timeout <ms>]
+quest-dev stay-awake [--pin <pin>] [--idle-timeout <ms>] [--low-battery <percent>]
 ```
 
 ### How It Works
 
-1. Sets Quest screen timeout to 24 hours
-2. Disables proximity sensor (keeps screen on even when not worn)
-3. Monitors for activity via SIGUSR1 signals
-4. Automatically restores settings after idle timeout (default: 5 minutes)
-5. Child watchdog process ensures cleanup even if parent crashes
+1. Disables autosleep, guardian, and system dialogs on Quest
+2. Wakes the Quest screen
+3. Monitors battery every 60 seconds, logging at 5% boundaries (95%, 90%, 85%...)
+4. Auto-exits and restores settings at low battery (default: 10%)
+5. Monitors for activity via SIGUSR1 signals with idle timeout
+6. Child watchdog process ensures cleanup even if parent is killed (TaskStop, terminal close, etc.)
+
+### PIN Configuration
+
+The PIN is your Meta Store PIN for the logged-in account. It can be provided via:
+
+1. `--pin <pin>` CLI flag (highest priority)
+2. `.quest-dev.json` in current directory: `{ "pin": "1234" }`
+3. `~/.config/quest-dev/config.json` (same format, fallback)
 
 ### Examples
 
 ```bash
-# Default: 5-minute idle timeout
+# Using PIN from config file
 quest-dev stay-awake
 
-# Custom timeout: 10 minutes
+# Explicit PIN
+quest-dev stay-awake --pin 1234
+
+# Custom idle timeout: 10 minutes
 quest-dev stay-awake --idle-timeout 600000
 
-# Short timeout for testing: 30 seconds
-quest-dev stay-awake -i 30000
+# Custom low battery threshold
+quest-dev stay-awake --low-battery 20
+
+# Check current property values
+quest-dev stay-awake --status
+
+# Manually restore all properties (if process was killed)
+quest-dev stay-awake --disable --pin 1234
 ```
 
 ### Options
 
+- `--pin <pin>`: Meta Store PIN (or set in config files)
 - `--idle-timeout <ms>` (alias `-i`): Idle timeout in milliseconds (default: 300000 = 5 minutes)
+- `--low-battery <percent>`: Exit when battery drops to this level (default: 10)
+- `--status`: Show current property values and exit
+- `--disable`: Manually restore all test properties and exit
 
 ### Behavior
 
 - **Active sessions**: As long as Claude Code tools execute, Quest stays awake (hooks send SIGUSR1)
 - **Idle detection**: After configured timeout with no activity, automatically exits and restores settings
-- **Manual exit**: Press Ctrl-C to immediately restore original settings
-- **Crash protection**: Child watchdog process detects parent death and restores settings
+- **Battery monitoring**: Logs battery at every 5% boundary crossing; auto-exits at low threshold (not charging only)
+- **Manual exit**: Press Ctrl-C to immediately restore settings
+- **Crash protection**: Child watchdog process detects parent death and restores settings to prevent battery drain
 
 ### Integration with Claude Code
 
@@ -190,12 +213,13 @@ This plugin includes a PostToolUse hook that automatically signals stay-awake af
 
 **Recommended Workflow:**
 ```bash
-# Terminal 1: Start stay-awake
+# Terminal 1: Start stay-awake (PIN from .quest-dev.json)
 quest-dev stay-awake
 
 # Terminal 2: Work in Claude Code
 claude -c
 # Quest stays awake automatically while you work
+# Battery status logged at 5% intervals
 # After 5 minutes of no activity, Quest returns to normal
 ```
 
@@ -209,13 +233,15 @@ claude -c
 **Can't start (already running)?**
 - Another instance is active: `kill $(cat ~/.quest-dev-stay-awake.pid)`
 
-**Proximity sensor stuck after crashes?**
-If stay-awake crashes or is killed without cleanup, manually restore with:
+**Settings stuck after unexpected kill?**
+If stay-awake is killed without cleanup (kill -9, power loss), manually restore:
 ```bash
-adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable
-adb shell settings put system screen_off_timeout 30000
+quest-dev stay-awake --disable --pin 1234
 ```
-Note: `automation_disable` actually RE-ENABLES normal proximity sensor behavior (counterintuitive naming).
+Or check current state:
+```bash
+quest-dev stay-awake --status
+```
 
 ---
 
@@ -294,7 +320,7 @@ grep -E "cr_.*error|chromium.*error" logs/logcat/*.txt
 # 1. Check connection
 adb devices
 
-# 2. Start stay-awake
+# 2. Start stay-awake (PIN from .quest-dev.json)
 quest-dev stay-awake
 
 # Terminal 2: Start log capture
@@ -304,18 +330,15 @@ quest-dev logcat start
 quest-dev open http://localhost:3000
 
 # 4. Work in Claude Code
-# (Quest stays awake via hooks)
+# (Quest stays awake via hooks, battery monitored automatically)
 
 # 5. Take progress screenshots
 quest-dev screenshot ~/Desktop -c "Feature X implemented"
 
-# 6. Check battery periodically
-quest-dev battery
-
-# 7. When done, stop logs
+# 6. When done, stop logs
 quest-dev logcat stop
 
-# 8. Ctrl-C stay-awake to restore Quest settings
+# 7. Ctrl-C stay-awake to restore Quest settings
 ```
 
 ### Quick Testing
@@ -355,11 +378,12 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 ## Tips
 
 1. **Always run stay-awake**: Quest sleeping mid-test is frustrating
-2. **Capture logs early**: Ring buffer overwrites quickly
-3. **Use captions**: Screenshots with context are invaluable
-4. **Check battery**: VR drains fast, especially during development
-5. **Close other tabs**: Use `--close-others` to avoid CDP confusion
+2. **Configure PIN once**: Put `{ "pin": "1234" }` in `.quest-dev.json` to avoid typing it every time
+3. **Capture logs early**: Ring buffer overwrites quickly
+4. **Use captions**: Screenshots with context are invaluable
+5. **Battery is monitored**: stay-awake logs battery at 5% intervals and auto-exits at 10%
+6. **Close other tabs**: Use `--close-others` to avoid CDP confusion
 
 ## Version
 
-Requires quest-dev CLI with stay-awake idle timeout support (v1.1.0+)
+Requires quest-dev CLI v1.3.0+. Requires Quest OS v44+.
