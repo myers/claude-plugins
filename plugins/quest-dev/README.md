@@ -90,7 +90,7 @@ quest-dev stay-awake --disable --pin 1234
 
 **Hook not working?**
 - Verify plugin is installed in Claude Code
-- Check hook script is executable: `ls -la $PLUGIN_DIR/hooks/scripts/send-stay-awake-signal.sh`
+- Check hook script is executable: `ls -la $CLAUDE_PLUGIN_ROOT/hooks/scripts/send-stay-awake-signal.sh`
 - Test hook manually: `bash /path/to/send-stay-awake-signal.sh`
 
 ## Files

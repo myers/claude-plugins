@@ -375,6 +375,45 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 
 **cdp-cli** plugin — General-purpose Chrome DevTools Protocol CLI for inspecting, controlling, and debugging any CDP-compatible browser. Use after `quest-dev open` to interact with pages via console, eval, screenshot, network, click, and fill commands.
 
+## CRITICAL: Do Not Bypass quest-dev With Raw ADB Commands
+
+**The following raw ADB commands will put the Quest into a broken state requiring a reboot.** Always use `quest-dev` commands instead — they handle enable/disable pairing and cleanup properly.
+
+### Never run these directly:
+
+| Dangerous Command | Why | Use Instead |
+|---|---|---|
+| `adb shell am broadcast -a com.oculus.vrpowermanager.automation_enable` | Conflicts with stay-awake's enable/disable pairing; leaves automation stuck on | `quest-dev stay-awake` |
+| `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` | Conflicts with stay-awake proximity management | `quest-dev stay-awake` |
+| `adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable` | Conflicts with stay-awake cleanup | `quest-dev stay-awake --disable` |
+| `adb shell svc power stayon true` | Conflicts with Quest VR power management layer | `quest-dev stay-awake` |
+| `adb shell settings put system screen_off_timeout ...` | Conflicts with stay-awake timeout management | `quest-dev stay-awake` |
+| `adb shell settings put global stay_on_while_plugged_in ...` | Conflicts with Quest VR power management | `quest-dev stay-awake` |
+| `adb shell input keyevent KEYCODE_WAKEUP` | Unreliable; use stay-awake which handles wake properly | `quest-dev stay-awake` |
+| `adb shell am force-stop com.oculus.guardian` | Breaks VR shell state; guardian restarts in broken loop | `quest-dev stay-awake` (disables guardian) |
+| `adb shell am force-stop com.oculus.metacam` | Breaks screenshot service; can't restart without reboot | `quest-dev screenshot` |
+| `adb shell am force-stop com.oculus.os.clearactivity` | Breaks VR shell state | Don't touch this |
+| `adb shell am startservice ... com.oculus.metacam` | Leaves metacam in broken background state | `quest-dev screenshot` |
+| `adb shell content call --uri content://com.oculus.rc ...` | Scriptable Testing API — stay-awake manages this | `quest-dev stay-awake` |
+
+### What IS safe to run directly:
+
+- `adb install -r <apk>` — install your app
+- `adb shell am start -n <component>` — launch your app
+- `adb shell am force-stop <your.app.package>` — stop YOUR app only
+- `adb shell pidof <package>` — check if a process is running
+- `adb shell dumpsys activity activities | grep <package>` — check foreground state
+- `adb shell dumpsys power` — read-only power state inspection
+- `adb shell screencap` — raw screenshot (shows compositor, not VR content)
+- `adb connect / disconnect` — ADB connection management
+- `echo "command" | nc -u -w1 <ip> <port>` — UDP commands to your app
+
+### Root Cause
+
+The Quest has a **layered power management system**: Android's standard power manager sits underneath Meta's VR power manager (`vrpowermanager`), which uses the Scriptable Testing API (`content://com.oculus.rc`). Sending commands at the wrong layer (e.g., `svc power stayon` at Android level while stay-awake manages the VR level) creates conflicts where the layers disagree about screen/proximity state. Force-stopping system services like `guardian` or `metacam` can leave the VR shell in an unrecoverable state that only a reboot fixes.
+
+---
+
 ## Tips
 
 1. **Always run stay-awake**: Quest sleeping mid-test is frustrating
@@ -383,6 +422,7 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 4. **Use captions**: Screenshots with context are invaluable
 5. **Battery is monitored**: stay-awake logs battery at 5% intervals and auto-exits at 10%
 6. **Close other tabs**: Use `--close-others` to avoid CDP confusion
+7. **Never bypass quest-dev**: Raw ADB power/proximity/guardian commands break the Quest (see above)
 
 ## Version
 
