@@ -1,5 +1,8 @@
 {
   "name": "myers-plugins",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
   "owner": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
@@ -7,49 +10,55 @@
   "plugins": [
     {
       "name": "android-logcat",
-      "source": "./plugins/android-logcat",
+      "source": "android-logcat",
       "description": "Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs.",
       "keywords": ["android", "logcat", "quest", "debugging", "vr"]
     },
     {
+      "name": "rust-correctness-by-construction",
+      "source": "rust-correctness-by-construction",
+      "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
+      "keywords": ["debugging", "rust"]
+    },
+    {
       "name": "cdp-cli",
-      "source": "./plugins/cdp-cli",
+      "source": "cdp-cli",
       "description": "Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP.",
       "keywords": ["cdp", "chrome", "devtools", "debugging", "browser"]
     },
     {
       "name": "find-block",
-      "source": "./plugins/find-block",
+      "source": "find-block",
       "description": "Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead.",
       "keywords": ["hooks", "bash", "find", "glob", "grep"]
     },
     {
       "name": "quest-dev",
-      "source": "./plugins/quest-dev",
+      "source": "quest-dev",
       "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
       "keywords": ["quest", "vr", "stay-awake", "hooks"]
     },
     {
       "name": "dev-plan",
-      "source": "./plugins/dev-plan",
+      "source": "dev-plan",
       "description": "Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans.",
       "keywords": ["planning", "commands", "interview", "opus"]
     },
     {
       "name": "fj",
-      "source": "./plugins/fj",
+      "source": "fj",
       "description": "Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories.",
       "keywords": ["forgejo", "gitea", "issues", "pr", "kanban", "cli"]
     },
     {
       "name": "code-patterns",
-      "source": "./plugins/code-patterns",
+      "source": "code-patterns",
       "description": "Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions.",
       "keywords": ["django", "python", "patterns", "conventions", "code-review"]
     },
     {
       "name": "woodpecker-cli",
-      "source": "./plugins/woodpecker-cli",
+      "source": "woodpecker-cli",
       "description": "Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution.",
       "keywords": ["woodpecker", "ci", "cd", "pipelines", "deploy", "cli"]
     }

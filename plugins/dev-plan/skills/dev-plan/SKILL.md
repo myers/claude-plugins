@@ -1,7 +1,6 @@
 ---
 name: dev-plan
 description: Interactive planning with in-depth requirements interview
-model: opus
 ---
 
 # Planning Request

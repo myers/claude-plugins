@@ -1,14 +1,26 @@
 # Myers Plugins
 
-A Claude Code plugin marketplace.
+A plugin marketplace for Claude Code and Vercel skills.
 
 ## Installation
 
-Add the marketplace, then install individual plugins:
+### Claude Code
 
 ```
 /plugin marketplace add myers/claude-plugins
 /plugin install <name>@myers-plugins
+```
+
+### Vercel Skills
+
+```
+npx skills add myers/claude-plugins
+```
+
+### Both at once
+
+```
+npx skills add myers/claude-plugins -a claude-code -a opencode
 ```
 
 ## Plugins
