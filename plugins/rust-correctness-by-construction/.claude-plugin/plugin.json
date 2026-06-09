@@ -1,0 +1,9 @@
+{
+  "name": "rust-correctness-by-construction",
+  "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
