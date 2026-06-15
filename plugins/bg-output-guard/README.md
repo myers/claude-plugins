@@ -52,6 +52,16 @@ The pipe-splitting is a heuristic (it splits on the last top-level `|`), not a f
 parser. It can be fooled by `|` inside quotes or subshells, but errs toward **allowing**
 (false negatives) rather than blocking legitimate commands.
 
+## Tests
+
+`tests/test-hook.sh` exercises the hook by constructing the stdin JSON the harness sends
+(via `jq -n`), running the script, and asserting on its exit code (2 = block, 0 = allow).
+It exits non-zero if any case fails, so it works as a CI check.
+
+```bash
+plugins/bg-output-guard/tests/test-hook.sh
+```
+
 ## Plugin structure
 
 ```
@@ -61,5 +71,6 @@ bg-output-guard/
 │   ├── hooks.json
 │   └── scripts/block-bg-filter.sh
 ├── skills/background-command-output/SKILL.md
+├── tests/test-hook.sh
 └── README.md
 ```
