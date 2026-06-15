@@ -106,6 +106,17 @@ assert WARN  "bg redirect > file"         'cargo build > build.log'        true
 assert WARN  "bg redirect >> file"        'cargo build >> build.log'       true
 
 echo
+echo "ALLOW: pipe/redirect tokens that live INSIDE quotes (not real operators)"
+assert ALLOW "bg | tail in quotes"        'echo "please | tail the log"'   true
+assert ALLOW "bg 2>/dev/null in quotes"   'echo "2>/dev/null is just text"' true
+assert ALLOW "bg | grep in single quotes" "printf 'see | grep here\n'"     true
+assert ALLOW "bg redirect in quotes only" 'echo "write to > file please"'  true
+# Mixed: quoted operator-noise must not hide a REAL trailing filter.
+assert BLOCK "bg quoted | + real | tail"  'echo "pipe | inside" | tail'    true
+assert BLOCK "bg quoted regex + | head"   'grep "a|b" file | head'         true
+assert BLOCK "bg quoted 2>&1 + real 2>/d" 'echo "x 2>&1" 2>/dev/null'      true
+
+echo
 echo "Emitted deny payload is well-formed JSON"
 assert_payload_valid 'cargo build 2>&1 | tail -n 50'
 assert_payload_valid 'make | grep error'

@@ -52,11 +52,21 @@ tail -n 50 <output-file>
 grep -n 'error' <output-file>
 ```
 
-## Caveat
+## Caveats
 
-The pipe-splitting is a heuristic (it splits on the last top-level `|`), not a full shell
-parser. It can be fooled by `|` inside quotes or subshells, but errs toward **allowing**
-(false negatives) rather than blocking legitimate commands.
+The matcher is a heuristic, not a full shell parser. Before checking for operators it
+blanks out the contents of single- and double-quoted strings, so operator-looking text in
+arguments (`echo "use | tail"`, `grep "a|b"`) is **not** mistaken for a real pipe or
+redirect. It does not handle every shell construct, though:
+
+- **Known false negatives (truncation slips through):** a filter that isn't the final pipe
+  stage is missed — e.g. `cmd | tail | cat` is allowed because `cat`, not `tail`, is last.
+  Wrapper forms like `cmd | env tail` or `cmd | command tail` also evade the name match.
+  These are honest-mistake bypasses, not adversarial concerns — the hook guards a habit,
+  not an attacker.
+- **Not handled:** escaped quotes (`\"`), heredocs, and `|`/redirects produced by
+  subshell/`eval` expansion. Escaped-quote edge cases can still misfire in either
+  direction.
 
 ## Tests
 

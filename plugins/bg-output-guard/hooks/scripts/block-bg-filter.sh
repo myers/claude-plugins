@@ -42,11 +42,37 @@ if [[ "$background" != "true" ]]; then
   exit 0
 fi
 
+# Build a "skeleton" of the command with the CONTENTS of quoted strings blanked out, so
+# that pipes/redirects appearing inside quotes (e.g. echo "use | tail") are not mistaken
+# for real shell operators. Each quoted run is replaced by a single 'Q' placeholder: that
+# preserves surrounding structure (echo "x"|tail still shows the pipe) while removing any
+# operator characters that lived inside the quotes. Done char-by-char in awk so single and
+# double quotes nest correctly. This is still a heuristic (no escaped-quote / heredoc
+# handling), but it removes the most common false-positive: operator-looking text in args.
+skeleton=$(printf '%s' "$command" | awk '
+{
+  out=""; q=""
+  n=length($0)
+  for (i=1;i<=n;i++){
+    c=substr($0,i,1)
+    if (q==""){
+      if (c=="\""||c=="\x27"){ q=c; out=out "Q" }   # opening quote -> one placeholder
+      else out=out c
+    } else {
+      if (c==q){ q="" }                              # closing quote -> drop char
+      # else: inside quotes, drop the char entirely
+    }
+  }
+  print out
+}')
+
+# All operator detection below runs against $skeleton, not the raw $command. The matched
+# filter NAME also comes from the skeleton, so it is never quoted text.
+
 # --- Block tier 1: trailing filter pipe ---------------------------------------
 # Isolate the final pipe stage: everything after the last "|".
-# (Heuristic; does not account for "|" inside quotes.)
-if [[ "$command" == *"|"* ]]; then
-  last_stage="${command##*|}"
+if [[ "$skeleton" == *"|"* ]]; then
+  last_stage="${skeleton##*|}"
   # Trim leading whitespace, then take the first word (the command name),
   # stripping any leading path.
   last_stage="${last_stage#"${last_stage%%[![:space:]]*}"}"
@@ -67,7 +93,7 @@ fi
 # there. Redirecting it away (2>/dev/null, 2> file) or merging both streams to
 # elsewhere (&> , >& ) destroys that. "2>&1" merely MERGES stderr into stdout (which
 # still goes to the file) and is explicitly allowed -- so strip it before matching.
-no_merge="${command//2>&1/}"
+no_merge="${skeleton//2>&1/}"
 if [[ "$no_merge" =~ 2\>[^\&] ]] || [[ "$no_merge" =~ 2\>$ ]] \
    || [[ "$no_merge" =~ \&\> ]] || [[ "$no_merge" =~ \>\& ]]; then
   deny "Background command blocked: it redirects stderr away from the log (e.g. 2>/dev/null, 2> file, &>, >&).\n\nIn background mode the harness captures BOTH stdout and stderr to the output file automatically. stderr is where build errors and warnings live -- suppressing or diverting it removes exactly the lines you most want in the log, with no upside.\n\nInstead: run the command WITHOUT the stderr redirect. Both streams are captured for free; filter the output FILE afterward if you need to narrow it down. (2>&1 is fine -- it merges stderr into stdout, which still reaches the file.)\n\n${SKILL_REF}"
@@ -77,7 +103,7 @@ fi
 # Not blocked, but a pipe or output redirect in background mode may still divert or
 # reshape output that would otherwise land in the log file verbatim. Nudge, don't block.
 # "2>&1" is already stripped into $no_merge and is harmless on its own.
-if [[ "$command" == *"|"* ]] || [[ "$no_merge" =~ \>\>? ]]; then
+if [[ "$skeleton" == *"|"* ]] || [[ "$no_merge" =~ \>\>? ]]; then
   warn "Heads-up: this background command contains a pipe or output redirect. In background mode the full output is captured to a log file the user can see -- any pipe or redirect may reshape or divert what reaches that file. If you only meant to narrow the output, prefer running it plain and filtering the output FILE afterward. Proceeding anyway.\n\n${SKILL_REF}"
 fi
 
