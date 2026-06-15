@@ -117,6 +117,24 @@ assert BLOCK "bg quoted regex + | head"   'grep "a|b" file | head'         true
 assert BLOCK "bg quoted 2>&1 + real 2>/d" 'echo "x 2>&1" 2>/dev/null'      true
 
 echo
+echo "BLOCK: wrapper-prefixed filter as the FINAL stage (env/command/xargs)"
+assert BLOCK "bg | env tail"              'cargo build | env tail -5'      true
+assert BLOCK "bg | command grep"          'make | command grep error'      true
+assert BLOCK "bg | command tail"          'make | command tail'            true
+assert BLOCK "bg | xargs grep"            'make | xargs grep error'        true
+
+echo
+echo "WARN by design: filter NOT the final stage (| filter | passthrough). Known"
+echo "warned bypass -- structurally identical to legit 'grep -v noise | tee file'."
+assert WARN  "bg | tail | cat"            'cargo build | tail -n 50 | cat' true
+assert WARN  "bg | grep | cat"            'make | grep error | cat'        true
+assert WARN  "bg | head | tee file"       'make | head -5 | tee build.log' true
+assert WARN  "bg | grep | sort | cat"     'make | grep x | sort | cat'     true
+assert WARN  "bg mid grep -v | tee"       'make | grep -v warn | tee b.log' true
+assert WARN  "bg | cat (no filter)"       'cargo build | cat'              true
+assert WARN  "bg | tee (no filter)"       'cargo build | tee build.log'    true
+
+echo
 echo "Emitted deny payload is well-formed JSON"
 assert_payload_valid 'cargo build 2>&1 | tail -n 50'
 assert_payload_valid 'make | grep error'

@@ -69,23 +69,50 @@ skeleton=$(printf '%s' "$command" | awk '
 # All operator detection below runs against $skeleton, not the raw $command. The matched
 # filter NAME also comes from the skeleton, so it is never quoted text.
 
-# --- Block tier 1: trailing filter pipe ---------------------------------------
-# Isolate the final pipe stage: everything after the last "|".
-if [[ "$skeleton" == *"|"* ]]; then
-  last_stage="${skeleton##*|}"
-  # Trim leading whitespace, then take the first word (the command name),
-  # stripping any leading path.
-  last_stage="${last_stage#"${last_stage%%[![:space:]]*}"}"
-  read -r first_word _rest <<<"$last_stage"
-  first_word="${first_word##*/}"
-
-  # Filters that discard or collapse lines when used as the final stage of a pipe.
-  # "tee" is intentionally NOT here: it writes a full copy.
-  case "$first_word" in
-    tail|head|grep|egrep|fgrep|rg|ag|sed|awk|cut|uniq|wc|sort|less|more)
-      deny "Background command blocked: '| ${first_word}' truncates the output before it reaches the log file.\n\nWhen a command runs in the background, its full output is written to a temp file that the harness UI shows you. Filtering at the pipe (| ${first_word}) throws away the rest of the log BEFORE it hits that file -- so it is gone from the UI and from any later inspection, with no upside.\n\nInstead: run the command WITHOUT the trailing filter so the full log goes to the output file, then filter the FILE once it completes:\n  - Read the output file with offset/limit, or\n  - grep / tail the output file path, e.g.  tail -n 50 <output-file>  or  grep ERROR <output-file>\n\n(tee is allowed -- it writes a full copy. A filter mid-pipeline that still writes full output downstream is fine.)\n\n${SKILL_REF}"
-      ;;
+# is_filter <name> -> 0 if name is a line-discarding/collapsing filter, else 1.
+# "tee" and "cat" are NOT filters: they pass the full stream through.
+is_filter() {
+  case "$1" in
+    tail|head|grep|egrep|fgrep|rg|ag|sed|awk|cut|uniq|wc|sort|less|more) return 0 ;;
+    *) return 1 ;;
   esac
+}
+
+# stage_cmd <pipe stage> -> the effective command name of that stage: leading whitespace
+# trimmed, any leading path stripped, and wrapper words (env/command/builtin/xargs/nice/
+# stdbuf/time/sudo) skipped so e.g. "env tail" reports "tail". Wrappers may themselves take
+# options; we skip leading words that are wrappers or look like flags until we hit the real
+# command. (xargs CMD runs CMD per input -- treat CMD as the effective command.)
+stage_cmd() {
+  local s="$1" w
+  # shellcheck disable=SC2086
+  set -- $s                                   # word-split the stage
+  while [[ $# -gt 0 ]]; do
+    w="${1##*/}"
+    case "$w" in
+      env|command|builtin|exec|nice|stdbuf|time|sudo|xargs)
+        shift; continue ;;                    # wrapper -> look at the next word
+      -*)
+        shift; continue ;;                    # a flag/option -> skip
+      *)
+        printf '%s' "$w"; return ;;
+    esac
+  done
+}
+
+# --- Block tier 1: the final pipe stage is a filter ---------------------------
+# We block only when the LAST stage truncates -- that is the unambiguous case where the
+# filtered (lossy) stream is exactly what reaches the log. Wrapper words (env/command/
+# xargs/...) are stripped so "| env tail" is caught. A filter that is NOT the final stage
+# -- e.g. "| tail | cat" or "| grep -v noise | tee file" -- is structurally indistinguishable
+# from a legitimate noise-filter-then-tee, so by design it falls through to the warn tier
+# (the user's call: warn, don't block, so the agent still learns its harness keeps the full
+# log). This means "| tail | cat" is a KNOWN, warned bypass rather than a hard block.
+if [[ "$skeleton" == *"|"* ]]; then
+  final=$(stage_cmd "${skeleton##*|}")
+  if is_filter "$final"; then
+    deny "Background command blocked: '| ${final}' truncates the output before it reaches the log file.\n\nWhen a command runs in the background, its full output is written to a temp file that the harness UI shows you. Filtering at the pipe (| ${final}) throws away the rest of the log BEFORE it hits that file -- so it is gone from the UI and from any later inspection, with no upside.\n\nInstead: run the command WITHOUT the trailing filter so the full log goes to the output file, then filter the FILE once it completes:\n  - Read the output file with offset/limit, or\n  - grep / tail the output file path, e.g.  tail -n 50 <output-file>  or  grep ERROR <output-file>\n\n(tee/cat are allowed -- they write a full copy. A filter mid-pipeline that still writes full output downstream is warned, not blocked.)\n\n${SKILL_REF}"
+  fi
 fi
 
 # --- Block tier 2: stderr suppression -----------------------------------------

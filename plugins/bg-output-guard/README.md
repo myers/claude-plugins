@@ -59,11 +59,15 @@ blanks out the contents of single- and double-quoted strings, so operator-lookin
 arguments (`echo "use | tail"`, `grep "a|b"`) is **not** mistaken for a real pipe or
 redirect. It does not handle every shell construct, though:
 
-- **Known false negatives (truncation slips through):** a filter that isn't the final pipe
-  stage is missed — e.g. `cmd | tail | cat` is allowed because `cat`, not `tail`, is last.
-  Wrapper forms like `cmd | env tail` or `cmd | command tail` also evade the name match.
-  These are honest-mistake bypasses, not adversarial concerns — the hook guards a habit,
-  not an attacker.
+- **Wrapper forms are caught:** leading wrapper words (`env`, `command`, `xargs`, `sudo`,
+  `nice`, `stdbuf`, `time`, ...) and a leading path are stripped, so `| env tail` and
+  `| /usr/bin/tail` block like a bare `| tail`.
+- **Deliberate warned bypass — filter not in the final stage:** `cmd | tail | cat` and
+  `cmd | grep -v noise | tee file` are structurally identical (filter → passthrough), so
+  the hook can't tell a hidden truncation from a legitimate noise-filter-then-`tee`. Rather
+  than block legit logging pipelines, a filter that isn't the **final** stage downgrades to
+  a non-blocking **warn**. So `| tail | cat` runs — but the agent is told the filter
+  truncates the log. Block only triggers when a filter is the literal final stage.
 - **Not handled:** escaped quotes (`\"`), heredocs, and `|`/redirects produced by
   subshell/`eval` expansion. Escaped-quote edge cases can still misfire in either
   direction.
