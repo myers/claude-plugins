@@ -1,7 +1,7 @@
 {
   "name": "bg-output-guard",
   "description": "Blocks output-truncating filter pipes (| tail, | grep, | head, etc.) on background Bash commands so the harness UI's output file keeps the full log. Filter the output file afterward instead.",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"

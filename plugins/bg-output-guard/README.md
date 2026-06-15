@@ -15,14 +15,20 @@ inspection — with no upside, since the agent could just as easily filter the f
 
 ## What it does
 
-A **PreToolUse** hook on `Bash`:
+A **PreToolUse** hook on `Bash` that only acts on **background** commands
+(`run_in_background: true`) — foreground commands are untouched, since their output goes to
+context where filtering is legitimate. It has three tiers:
 
-- Only acts on **background** commands (`run_in_background: true`). Foreground commands are
-  untouched, because their output goes to context where filtering is legitimate.
-- Inspects the **final stage** of the pipeline. If it's a known output-destroying filter
-  (`tail head grep egrep fgrep rg ag sed awk cut uniq wc sort less more`), the command is
-  **blocked** with guidance to run it unfiltered and filter the output file afterward.
-- **Allows** `tee` (it writes a full copy) and filters that appear mid-pipeline.
+1. **Block — trailing filter pipe.** If the final stage of the pipeline is a known
+   output-destroying filter (`tail head grep egrep fgrep rg ag sed awk cut uniq wc sort
+   less more`), the command is denied with guidance to run it unfiltered and filter the
+   output file afterward. `tee` (writes a full copy) and mid-pipeline filters are allowed.
+2. **Block — stderr suppression.** If the command diverts stderr away from the log
+   (`2>/dev/null`, `2> file`, `&>`, `>&`), it's denied — stderr is captured to the log file
+   for free and is where build errors and warnings live. `2>&1` (merges into stdout) is
+   allowed.
+3. **Warn — any other pipe or output redirect.** A non-blocking note (the command still
+   runs) reminding that pipes/redirects in background mode may reshape what reaches the log.
 
 The bundled **`background-command-output` skill** documents the behavior: where background
 output goes, that stdout *and* stderr are captured by default, why not to filter at the

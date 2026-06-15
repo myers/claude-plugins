@@ -8,7 +8,7 @@
     {
       "name": "bg-output-guard",
       "source": "./plugins/bg-output-guard",
-      "description": "Blocks output-truncating filter pipes (| tail, | grep, | head, etc.) on background Bash commands so the harness UI keeps the full log. Includes a skill explaining background command output.",
+      "description": "Blocks output-truncating filter pipes (| tail, | grep, | head, etc.) and stderr suppression (2>/dev/null) on background Bash commands, and warns on other pipes/redirects, so the harness UI keeps the full log. Includes a skill explaining background command output.",
       "keywords": ["hooks", "bash", "background", "tail", "grep", "output"]
     },
     {
