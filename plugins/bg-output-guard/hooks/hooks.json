@@ -1,0 +1,17 @@
+{
+  "description": "Blocks output-truncating filter pipes on background Bash commands so the full log is preserved in the output file",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/block-bg-filter.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

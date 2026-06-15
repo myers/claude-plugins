@@ -1,0 +1,56 @@
+#!/bin/bash
+# PreToolUse hook: block output-truncating filter pipes on BACKGROUND Bash commands.
+#
+# Rationale: when a Bash command runs with run_in_background=true, its stdout/stderr
+# go to a temp output file that the harness UI shows. A trailing "| tail", "| grep",
+# "| head" etc. pre-filters at the pipe, so only the truncated result ever reaches the
+# file -- the rest of the log is lost for both the UI and any later inspection. There is
+# no upside to filtering at the pipe in background mode: the agent can Read the output
+# file with offset/limit, or grep/tail the FILE once the command completes, keeping the
+# full log intact. So we forbid the filter and tell the agent to filter the file instead.
+#
+# Only the FINAL stage of the pipeline is checked -- a filter mid-pipeline (e.g. feeding
+# a later "tee file.log") does not truncate the final output, and "tee" is explicitly
+# allowed because it writes a full copy.
+#
+# This is a heuristic, not a full shell parser: it splits on the last top-level "|" and
+# can be fooled by "|" inside quotes/subshells. It errs toward ALLOWING (false negatives)
+# rather than blocking legitimate commands.
+
+input=$(cat)
+
+command=$(echo "$input" | jq -r '.tool_input.command // empty')
+background=$(echo "$input" | jq -r '.tool_input.run_in_background // false')
+
+# Only police background commands. Foreground output goes to context, where filtering
+# is a legitimate way to keep the result small.
+if [[ "$background" != "true" ]]; then
+  exit 0
+fi
+
+# No pipe -> nothing to truncate.
+if [[ "$command" != *"|"* ]]; then
+  exit 0
+fi
+
+# Isolate the final pipe stage: everything after the last "|".
+# (Heuristic; does not account for "|" inside quotes.)
+last_stage="${command##*|}"
+
+# Trim leading whitespace, strip a leading redirect like "2>&1" if present, then take
+# the first word (the command name), stripping any leading path.
+last_stage="${last_stage#"${last_stage%%[![:space:]]*}"}"
+read -r first_word _rest <<<"$last_stage"
+first_word="${first_word##*/}"
+
+# Filters that discard or collapse lines when used as the final stage of a pipe.
+# "tee" is intentionally NOT here: it writes a full copy.
+case "$first_word" in
+  tail|head|grep|egrep|fgrep|rg|ag|sed|awk|cut|uniq|wc|sort|less|more)
+    reason="Background command blocked: '| ${first_word}' truncates the output before it reaches the log file.\n\nWhen a command runs in the background, its full output is written to a temp file that the harness UI shows you. Filtering at the pipe (| ${first_word}) throws away the rest of the log BEFORE it hits that file -- so it is gone from the UI and from any later inspection, with no upside.\n\nInstead: run the command WITHOUT the trailing filter so the full log goes to the output file, then filter the FILE once it completes:\n  - Read the output file with offset/limit, or\n  - grep / tail the output file path, e.g.  tail -n 50 <output-file>  or  grep ERROR <output-file>\n\n(tee is allowed -- it writes a full copy. A filter mid-pipeline that still writes full output downstream is fine.)"
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}' "$reason" >&2
+    exit 2
+    ;;
+esac
+
+exit 0

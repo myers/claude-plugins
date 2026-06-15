@@ -6,6 +6,12 @@
   },
   "plugins": [
     {
+      "name": "bg-output-guard",
+      "source": "./plugins/bg-output-guard",
+      "description": "Blocks output-truncating filter pipes (| tail, | grep, | head, etc.) on background Bash commands so the harness UI keeps the full log. Includes a skill explaining background command output.",
+      "keywords": ["hooks", "bash", "background", "tail", "grep", "output"]
+    },
+    {
       "name": "android-logcat",
       "source": "./plugins/android-logcat",
       "description": "Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs.",
