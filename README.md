@@ -48,4 +48,7 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 <!-- END PLUGINS -->
 
 > The table above is generated from [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json).
-> After adding or editing a plugin, run `python3 scripts/gen_readme.py`.
+> After adding or editing a plugin, run `python3 scripts/gen_readme.py`. A
+> [prek](https://github.com/j178/prek) pre-commit hook regenerates it
+> automatically — install it once with `prek install` (see
+> [`.pre-commit-config.yaml`](.pre-commit-config.yaml)).

@@ -1,0 +1,15 @@
+# Managed with prek (https://github.com/j178/prek), a drop-in pre-commit runner.
+# Install the git hook once:   prek install
+# Run against all files:       prek run --all-files
+repos:
+  - repo: local
+    hooks:
+      - id: gen-readme
+        name: Regenerate README plugin table
+        description: >-
+          Rewrites the plugin table in README.md from marketplace.json. If the
+          table was stale, the commit fails so you can review and re-stage.
+        entry: python3 scripts/gen_readme.py
+        language: system
+        pass_filenames: false
+        files: ^(\.claude-plugin/marketplace\.json|README\.md|scripts/gen_readme\.py)$
