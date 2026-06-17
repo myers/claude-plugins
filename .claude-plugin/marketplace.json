@@ -24,6 +24,12 @@
       "keywords": ["debugging", "rust"]
     },
     {
+      "name": "c-to-rust-port",
+      "source": "./plugins/c-to-rust-port",
+      "description": "Create and maintain a Rust port of a C codebase, including a crate that stays in sync with upstream C long-term",
+      "keywords": ["rust", "c", "porting", "c-to-rust", "ffi", "translation"]
+    },
+    {
       "name": "cdp-cli",
       "source": "./plugins/cdp-cli",
       "description": "Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP.",

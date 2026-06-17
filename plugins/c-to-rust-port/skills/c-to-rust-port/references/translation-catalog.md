@@ -5,6 +5,13 @@ idiomatic upgrade.** It is organized the way that workflow actually hits you —
 you're looking at a C construct and need to know which Rust tool it maps to, and
 *which phase* to apply it in.
 
+> **Cross-skill references.** This catalog owns the *port workflow*; the deep
+> type-system technique detail lives in the **`rust-correctness-by-construction`**
+> skill. Wherever an entry says `type-system-patterns.md`,
+> `concurrency-lock-ordering.md`, `verification-tools.md`,
+> `applying-the-patterns.md`, or `exemplar-codebases.md`, that file is in *that*
+> skill's `references/` — load it for the implementation details.
+
 ## The phasing discipline (read first)
 
 The two passes have different goals, and conflating them is the main failure
@@ -30,16 +37,32 @@ version is trusted do you upgrade. See `verification-tools.md`.
 **Phase 2 — idiomatic upgrade.** Now reach for the unrepresentable-states
 toolbox. Each upgrade should be behavior-preserving (most type-level refactors
 are, by construction) and you re-run the same oracles after each one, so a
-regression is bisectable to a single upgrade. This is where the rest of this
-skill's docs come in.
+regression is bisectable to a single upgrade. This is where the
+`rust-correctness-by-construction` skill's technique docs come in.
 
-The per-pattern entries below are tagged:
+**The living-upstream case (read if the C keeps changing).** Phase 2 assumes
+the port is one-time: once equivalence is proven you graduate and abandon the C.
+But if the C is a *living* upstream you re-sync from — diffing C↔Rust every cycle
+to catch port bugs and absorb their changes — diff-ability is not temporary, it
+is permanent, and a second cost now outranks provability: **diff-stability**, how
+much each upgrade scrambles the line-for-line correspondence you rely on every
+resync. It is roughly *orthogonal* to P1/P2 and tracks **locality**, so each
+pattern below also carries a diff-stability tag. See the diff-stability section
+after the table.
+
+The per-pattern entries below are tagged on two axes:
 - **[P1]** — do this in the faithful pass; the safe translation *is* the
   idiomatic one (or close enough that it doesn't obscure the diff). Free win.
 - **[P2]** — defer to the idiomatic pass; it changes structure enough to
   complicate the equivalence proof.
 - **[P1→P2]** — a P1 version and a better P2 version both exist; start safe,
   upgrade later.
+- **[D-light]** — local type-swap; call sites still map ~1:1 to the C, so an
+  upstream patch lands cleanly. Safe to adopt and *keep* against a living
+  upstream.
+- **[D-mod]** — reshapes one function's access sites but stays local.
+- **[D-heavy]** — restructures control flow / data model / call graph; every
+  future upstream patch to that region must be hand-re-mapped.
 
 ## Quick lookup table
 
@@ -293,6 +316,58 @@ documented. **P2:** `Pin` plus `pin-init` for sound in-place initialization, so
 
 ---
 
+## Diff-stability: which upgrades survive a living upstream
+
+If you re-sync from an upstream C that keeps changing, the question is not just
+"is this upgrade safe?" but "what does it cost me on *every future* resync?" That
+cost is **diff-stability**, and it is roughly orthogonal to P1/P2 because it
+tracks **locality**, not provability:
+
+- **Diff-light** = a local type-swap confined to a declaration + boundary; the
+  call sites still read 1:1 against the C, so an upstream patch lands cleanly.
+- **Diff-heavy** = structural: it deletes or reorders control flow, threads a new
+  parameter through the call graph, or rewrites every access site. Every future
+  upstream patch to that region has to be hand-re-mapped through the divergence.
+
+The orthogonality is the whole point. **§14 buffer-cast → `zerocopy` is [P2] yet
+[D-light]** — the cast site swaps 1:1, nothing moves. Conversely **§4
+goto-cleanup → RAII is the highest-value one-time upgrade yet [D-heavy]** — the
+cleanup ladder *vanishes*, so an upstream patch to those `err_free:` labels has
+nowhere to land. Provability-once and diff-stability are different axes; a living
+port optimizes the second.
+
+**[D-light] — adopt freely and keep, even against a hot file** (value flows
+through identically, sites map ~1:1): §1 NULL→`Option`, §2 errno→`Result<T,Errno>`
+(codes kept), §12 `bitflags!`, §13 fixed buffer→slices/`heapless`, §14 buffer
+cast→`zerocopy`, §17 MMIO→typed registers, §18 sentinel→`Option`/`NonZero`, §19
+units→newtype, §20 bounds→`.get()`/newtype index, §21 C string→`CStr`/`str` at
+the boundary.
+
+**[D-mod] — reshapes one function's access sites, stays local:** §3
+out-param→`Result`, §5 tagged union→sum type, §6 flag→`enum`, §9
+lock/unlock→`Mutex<T>` guard, §10 ops struct→trait, §15 global→`OnceLock`.
+
+**[D-heavy] — restructures control flow / data model / call graph; defer or
+fork:** §4 goto→RAII, §6 →typestate, §8 intrusive list→arena/`GhostCell`, §9
+→static lock ordering / `Locked` context (heaviest — threads through the whole
+call graph), §11 void\*→generics, §16 `container_of`→`intrusive-collections`,
+§22 self-ref→`Pin`/`pin-init`.
+
+### Workflow for a living port
+
+You do not go Phase 1 → Phase 2 *globally*. You gate by **upstream churn**:
+
+1. **Adopt every [D-light] upgrade freely**, even in Phase 1 — they are safe
+   *and* cheap-forever, so there is no reason to keep them at the C's lower rung.
+2. **Gate [D-mod]/[D-heavy] upgrades on `git log` churn of the C file.** Hot
+   files (frequently patched upstream) stay diff-light only; cold/stable
+   subsystems can take the full structural treatment. The churn is the signal —
+   measure it, don't guess.
+3. **When you do take a [D-heavy] upgrade, leave an anchor comment** tying the
+   Rust back to the C function + label, e.g. `// C: tcp_input() err_free_buf:`.
+   That gives the next upstream diff a landing point and demotes a [D-heavy]
+   change to [D-mod] in practice.
+
 ## Reading ownership intent out of C
 
 The hardest part of Phase 2 isn't syntax — it's that **C encodes ownership in
@@ -332,7 +407,8 @@ Idiomatic does not mean "maximally clever." Leave it alone when:
 - **A type-level encoding would be write-only.** If the trait bounds needed to
   make something unrepresentable are unreadable to the team, you've traded a
   findable bug for an unmaintainable abstraction. Stay on a lower rung and check
-  at runtime (see SKILL.md "When NOT to climb").
+  at runtime (see the `rust-correctness-by-construction` skill's
+  `applying-the-patterns.md`, "When NOT to climb").
 - **The behavior would change.** If an upgrade can't be made behavior-preserving,
   it's not part of the faithful-translation contract — flag it as a separate,
   reviewed change, not folded silently into the idiomatic pass.
@@ -351,3 +427,26 @@ Concretely, for an agent doing a translation pass:
    time and re-running the oracles after each, so any regression bisects to one
    upgrade. Route each upgrade through the relevant reference doc.
 5. **Record the inferred ownership contract** in each signature as you go.
+6. **Report only what needs action** (see below) — don't narrate the matches.
+
+## Reporting C↔Rust divergences
+
+Every resync produces a report: here is what diverged between their C and our
+Rust. The report is for action, so write only the action. Recipe:
+
+- **List only divergences that need a decision or a fix** — a port bug, or an
+  upstream change to absorb. Each: the C line, the Rust line, the consequence,
+  the fix.
+- **Do not write a "what's correct" / "verified parity" section.** Lines that
+  match need no action, so they are noise; the matching is the default and the
+  reader assumes it. Listing positives buries the one line that matters.
+- **Caveman register.** Terse. Drop "I'd be happy to", "Great question",
+  "Let's", hedges, and per-item preamble. Noun-verb-consequence-fix. The diff is
+  the deliverable, not the prose around it.
+- **Auto-clarity exception.** Break out of terse into full prose for exactly one
+  thing: a genuine correctness or safety risk (silent UB, a divergence that
+  corrupts state, a modulo-by-zero). Spend the words where a misread is
+  expensive, nowhere else.
+
+Rule of thumb: if a line in your report would not change what the reader *does*,
+cut it.
