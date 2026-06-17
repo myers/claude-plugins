@@ -1,7 +1,7 @@
 {
   "name": "rust-correctness-by-construction",
-  "description": "Write Rust where illegal states and concurrency bugs are unrepresentable, including porting C to Rust and maintaining ports against a living upstream",
-  "version": "1.1.0",
+  "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
+  "version": "2.0.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"

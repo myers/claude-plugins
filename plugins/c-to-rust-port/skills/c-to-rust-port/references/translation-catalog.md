@@ -5,6 +5,13 @@ idiomatic upgrade.** It is organized the way that workflow actually hits you —
 you're looking at a C construct and need to know which Rust tool it maps to, and
 *which phase* to apply it in.
 
+> **Cross-skill references.** This catalog owns the *port workflow*; the deep
+> type-system technique detail lives in the **`rust-correctness-by-construction`**
+> skill. Wherever an entry says `type-system-patterns.md`,
+> `concurrency-lock-ordering.md`, `verification-tools.md`,
+> `applying-the-patterns.md`, or `exemplar-codebases.md`, that file is in *that*
+> skill's `references/` — load it for the implementation details.
+
 ## The phasing discipline (read first)
 
 The two passes have different goals, and conflating them is the main failure
@@ -30,8 +37,8 @@ version is trusted do you upgrade. See `verification-tools.md`.
 **Phase 2 — idiomatic upgrade.** Now reach for the unrepresentable-states
 toolbox. Each upgrade should be behavior-preserving (most type-level refactors
 are, by construction) and you re-run the same oracles after each one, so a
-regression is bisectable to a single upgrade. This is where the rest of this
-skill's docs come in.
+regression is bisectable to a single upgrade. This is where the
+`rust-correctness-by-construction` skill's technique docs come in.
 
 **The living-upstream case (read if the C keeps changing).** Phase 2 assumes
 the port is one-time: once equivalence is proven you graduate and abandon the C.
@@ -400,7 +407,8 @@ Idiomatic does not mean "maximally clever." Leave it alone when:
 - **A type-level encoding would be write-only.** If the trait bounds needed to
   make something unrepresentable are unreadable to the team, you've traded a
   findable bug for an unmaintainable abstraction. Stay on a lower rung and check
-  at runtime (see SKILL.md "When NOT to climb").
+  at runtime (see the `rust-correctness-by-construction` skill's
+  `applying-the-patterns.md`, "When NOT to climb").
 - **The behavior would change.** If an upgrade can't be made behavior-preserving,
   it's not part of the faithful-translation contract — flag it as a separate,
   reviewed change, not folded silently into the idiomatic pass.

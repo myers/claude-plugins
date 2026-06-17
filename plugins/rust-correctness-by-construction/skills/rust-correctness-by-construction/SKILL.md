@@ -2,18 +2,15 @@
 name: rust-correctness-by-construction
 description: >-
   Use when writing or reviewing systems / kernel / driver / embedded /
-  concurrency Rust for correctness by construction, designing an API that's hard
-  to misuse, porting C to Rust, or maintaining a Rust port against a living
-  upstream C (diffing the two to catch port bugs or absorb upstream changes) — to
-  make illegal states and concurrency bugs unrepresentable, rejected by the
-  compiler rather than caught at runtime.
+  concurrency Rust for correctness by construction, or designing an API that's
+  hard to misuse — to make illegal states and concurrency bugs unrepresentable,
+  rejected by the compiler rather than caught at runtime.
   Triggers: typestate, phantom/ghost/branded types, PhantomData, generativity,
   sealed traits, "parse don't validate", newtype invariants, smart constructors,
   making invalid states unrepresentable, compile-time deadlock prevention, lock
   ordering, capability/witness tokens, units of measure, verification tools
-  (Loom, Kani, MIRI, Flux, Prusti, Creusot), or a C idiom (tagged union,
-  goto-cleanup, ops struct, kref/refcount, intrusive list, void* context, NULL,
-  errno, buffer cast) that needs the right Rust tool.
+  (Loom, Kani, MIRI, Flux, Prusti, Creusot). Porting C to Rust or keeping a Rust
+  crate in sync with upstream C: use the c-to-rust-port skill instead.
 ---
 
 # Correctness by Construction in Rust
@@ -50,20 +47,11 @@ at once; each is a deep dive meant to be read when its pattern is the right tool
 
 ### Decision tree: what invariant are you protecting?
 
-- **"I'm porting C to Rust and want to know which Rust tool a given C idiom maps
-  to" (tagged unions, goto-cleanup, ops structs, kref/refcount, intrusive lists,
-  void* context, NULL, errno, buffer casts)** → the C-idiom catalog, phased for
-  faithful-translation vs. idiomatic-upgrade. See
-  `references/c-to-rust-translation.md`. **Start here for any port; it owns the
-  porting workflow and routes to the other docs for each upgrade.**
-
-- **"I'm maintaining a Rust port against a *living* upstream C — re-syncing
-  periodically and diffing the two to catch port bugs or absorb upstream
-  changes, and I need to know which correctness upgrades won't wreck
-  diff-ability"** → the diff-stability axis: which CbC techniques are local
-  (safe to keep) vs. structural (defer or fork), how to gate on upstream churn,
-  and how to report divergences. See `references/c-to-rust-translation.md`
-  ("Diff-stability" and "Reporting C↔Rust divergences").
+- **"I'm porting C to Rust, or maintaining a Rust crate that stays in sync with
+  a living upstream C" (which Rust tool a C idiom maps to, the faithful → prove →
+  idiomatic workflow, keeping the two diffable across resyncs, reporting
+  divergences)** → this is a different skill. Use **`c-to-rust-port`**, which owns
+  the porting workflow and routes back here for each type-level technique.
 
 - **"This value must satisfy a constraint that's expensive or dangerous to
   re-check" (a parsed email, a non-empty slice, an in-range index, validated
@@ -118,24 +106,16 @@ at once; each is a deep dive meant to be read when its pattern is the right tool
 - **"I want the original papers / essays"** → see
   `references/foundational-papers.md`.
 
-## Porting C is a primary use case
+## Porting C to Rust is a separate skill
 
-It has its own discipline — the "make illegal states unrepresentable" tools can
-actively *hurt* if applied too early — so the full three-phase workflow
-(faithful + safe → prove it → idiomatic upgrade) lives in
-`references/c-to-rust-translation.md`. **Start there for any port.** The short
-version: produce a sound translation that stays structurally close to the C so
-the two can be diffed (apply only translations that are simultaneously safe *and*
-faithful; defer the cleverer upgrades to a TODO list); establish behavioral
-equivalence with the original before touching idioms; then work the TODO list one
-type-level upgrade at a time, re-running the oracles after each.
+If your starting point is a C codebase — whether a one-time port or a Rust crate
+that tracks a living upstream — the workflow (faithful + safe → prove it →
+idiomatic upgrade, kept diffable across resyncs) lives in the **`c-to-rust-port`**
+skill. It owns the C-idiom → Rust-tool catalog and the diff-stability discipline,
+and routes back to *this* skill for the deep detail on each type-level technique.
 
 ## Reference docs
 
-- `references/c-to-rust-translation.md` — **entry point for any C port.** A
-  C-idiom → Rust-tool catalog with a quick-lookup table, the full
-  faithful → prove → idiomatic-upgrade workflow, reading ownership intent out of
-  C conventions, and what not to upgrade.
 - `references/type-system-patterns.md` — newtypes, sum types, parse-don't-validate,
   typestate, builder-typestate, sealed traits, phantom/branded/ghost types,
   generativity, witness tokens, const generics, units of measure.
