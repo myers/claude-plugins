@@ -100,6 +100,18 @@ stage_cmd() {
   done
 }
 
+# --- Block tier 0: nohup detaches the process from the harness ----------------
+# nohup makes the process ignore SIGHUP and, when stdout is not a tty (always the case
+# here), redirects output to ./nohup.out -- diverting it away from the harness's output
+# file. It is almost always paired with "&" to double-background, spawning a detached
+# child the harness can neither track nor stop while the task "completes" instantly. In
+# background mode the harness ALREADY manages the process lifecycle and captures output
+# to the log file, so nohup has no upside and destroys both. Match "nohup" as a command
+# word (a leading path like /usr/bin/nohup is covered by the [^[:alnum:]_] boundary).
+if [[ "$skeleton" =~ (^|[^[:alnum:]_])nohup([[:space:]]|$) ]]; then
+  deny "Background command blocked: it uses 'nohup'.\n\nnohup makes the process ignore SIGHUP and, when stdout is not a terminal (it never is here), redirects output to ./nohup.out -- so the real output never reaches the harness log file. It is almost always paired with '&', double-backgrounding into a detached process the harness can neither track nor stop, while the task reports completion immediately.\n\nIn background mode the harness already keeps the process alive and captures BOTH stdout and stderr to the output file for you. nohup defeats that with no upside.\n\nInstead: run the command plain with run_in_background -- drop 'nohup' (and the trailing '&'). The harness handles detachment and output capture; Read the output file or filter it once the command completes.\n\n${SKILL_REF}"
+fi
+
 # --- Block tier 1: the final pipe stage is a filter ---------------------------
 # We block only when the LAST stage truncates -- that is the unambiguous case where the
 # filtered (lossy) stream is exactly what reaches the log. Wrapper words (env/command/

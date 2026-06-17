@@ -56,6 +56,11 @@ see in the UI.
 Likewise, do not suppress stderr in background mode (`2>/dev/null`, `2> file`, `&>`):
 stderr is where build errors and warnings live, and it's captured for free.
 
+Do **not** wrap a background command in `nohup` (e.g. `nohup cmd &`). The harness already
+keeps the process alive and captures its output; `nohup` redirects output to `nohup.out`
+and detaches the process so the harness can no longer track or stop it. Run the command
+plain with `run_in_background` and let the harness handle detachment and capture.
+
 ## The right pattern: run unfiltered, filter the FILE afterward
 
 Let the full output go to the file, then narrow it down once the command completes:
@@ -83,6 +88,7 @@ the slice you need.
 | Find matching lines           | `cmd \| grep X` in background   | run `cmd`, then `grep X <output-file>`    |
 | See errors only               | `cmd 2>/dev/null` in background | run `cmd` (stderr is captured), grep file |
 | Capture both streams          | adding `2>&1`                   | nothing — both are captured by default    |
+| Keep a long task running      | `nohup cmd &` in background     | run `cmd` plain — the harness keeps it alive |
 
 This is enforced by the `bg-output-guard` plugin's PreToolUse hook, which blocks
 output-truncating filter pipes on background Bash commands.
