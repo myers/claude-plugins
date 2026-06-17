@@ -86,7 +86,20 @@ assert BLOCK "bg cmd &>/dev/null"         'cargo build &>/dev/null'        true
 assert BLOCK "bg cmd >&/dev/null"         'cargo build >&/dev/null'        true
 
 echo
+echo "BLOCK: background + nohup (detaches process, diverts output)"
+assert BLOCK "bg nohup cmd"               'nohup cargo build'              true
+assert BLOCK "bg nohup cmd &"             'nohup long-task &'              true
+assert BLOCK "bg nohup path"              '/usr/bin/nohup make'           true
+assert BLOCK "bg sh -c nohup"             'sh -c nohup make'              true
+
+echo
+echo "ALLOW: nohup as substring/quoted text is not a command word"
+assert ALLOW "bg nohuptool (substring)"   'nohuptool --run'               true
+assert ALLOW "bg nohup in quotes"         'echo "use nohup for daemons"'  true
+
+echo
 echo "ALLOW: foreground (output goes to context; filtering is legit)"
+assert ALLOW "fg nohup cmd"               'nohup cargo build'              false
 assert ALLOW "fg cargo build | tail"      'cargo build 2>&1 | tail -n 50'  false
 assert ALLOW "fg make | grep"             'make | grep error'              false
 assert ALLOW "fg cmd 2>/dev/null"         'cargo build 2>/dev/null'        false
@@ -139,6 +152,7 @@ echo "Emitted deny payload is well-formed JSON"
 assert_payload_valid 'cargo build 2>&1 | tail -n 50'
 assert_payload_valid 'make | grep error'
 assert_payload_valid 'cargo build 2>/dev/null'
+assert_payload_valid 'nohup cargo build &'
 
 echo
 echo "----------------------------------------"

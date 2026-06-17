@@ -27,7 +27,12 @@ context where filtering is legitimate. It has three tiers:
    (`2>/dev/null`, `2> file`, `&>`, `>&`), it's denied — stderr is captured to the log file
    for free and is where build errors and warnings live. `2>&1` (merges into stdout) is
    allowed.
-3. **Warn — any other pipe or output redirect.** A non-blocking note (the command still
+3. **Block — `nohup`.** If the command uses `nohup`, it's denied. `nohup` ignores `SIGHUP`
+   and redirects output to `./nohup.out` (stdout isn't a TTY here), diverting it away from
+   the log file — and paired with `&` it double-backgrounds into a detached process the
+   harness can't track or stop. The harness already manages lifecycle and output capture in
+   background mode, so `nohup` has no upside.
+4. **Warn — any other pipe or output redirect.** A non-blocking note (the command still
    runs) reminding that pipes/redirects in background mode may reshape what reaches the log.
 
 The bundled **`background-command-output` skill** documents the behavior: where background
