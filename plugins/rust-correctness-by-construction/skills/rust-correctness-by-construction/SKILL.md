@@ -1,10 +1,12 @@
 ---
 name: rust-correctness-by-construction
 description: >-
-  Write Rust where illegal states and concurrency bugs are unrepresentable —
-  rejected by the compiler, not caught at runtime. Use when writing or reviewing
-  systems / kernel / driver / embedded / concurrency Rust for correctness by
-  construction, designing an API that's hard to misuse, or porting C to Rust.
+  Use when writing or reviewing systems / kernel / driver / embedded /
+  concurrency Rust for correctness by construction, designing an API that's hard
+  to misuse, porting C to Rust, or maintaining a Rust port against a living
+  upstream C (diffing the two to catch port bugs or absorb upstream changes) — to
+  make illegal states and concurrency bugs unrepresentable, rejected by the
+  compiler rather than caught at runtime.
   Triggers: typestate, phantom/ghost/branded types, PhantomData, generativity,
   sealed traits, "parse don't validate", newtype invariants, smart constructors,
   making invalid states unrepresentable, compile-time deadlock prevention, lock
@@ -54,6 +56,14 @@ at once; each is a deep dive meant to be read when its pattern is the right tool
   faithful-translation vs. idiomatic-upgrade. See
   `references/c-to-rust-translation.md`. **Start here for any port; it owns the
   porting workflow and routes to the other docs for each upgrade.**
+
+- **"I'm maintaining a Rust port against a *living* upstream C — re-syncing
+  periodically and diffing the two to catch port bugs or absorb upstream
+  changes, and I need to know which correctness upgrades won't wreck
+  diff-ability"** → the diff-stability axis: which CbC techniques are local
+  (safe to keep) vs. structural (defer or fork), how to gate on upstream churn,
+  and how to report divergences. See `references/c-to-rust-translation.md`
+  ("Diff-stability" and "Reporting C↔Rust divergences").
 
 - **"This value must satisfy a constraint that's expensive or dangerous to
   re-check" (a parsed email, a non-empty slice, an in-range index, validated

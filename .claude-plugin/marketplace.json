@@ -20,8 +20,8 @@
     {
       "name": "rust-correctness-by-construction",
       "source": "./plugins/rust-correctness-by-construction",
-      "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
-      "keywords": ["debugging", "rust"]
+      "description": "Write Rust where illegal states and concurrency bugs are unrepresentable, including porting C to Rust and maintaining ports against a living upstream",
+      "keywords": ["debugging", "rust", "c-to-rust", "porting"]
     },
     {
       "name": "cdp-cli",
