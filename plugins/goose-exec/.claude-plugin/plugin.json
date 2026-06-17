@@ -1,0 +1,9 @@
+{
+  "name": "goose-exec",
+  "description": "Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}

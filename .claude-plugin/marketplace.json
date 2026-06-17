@@ -64,6 +64,12 @@
       "source": "./plugins/woodpecker-cli",
       "description": "Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution.",
       "keywords": ["woodpecker", "ci", "cd", "pipelines", "deploy", "cli"]
+    },
+    {
+      "name": "goose-exec",
+      "source": "./plugins/goose-exec",
+      "description": "Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply.",
+      "keywords": ["goose", "deepseek", "execution", "orchestration", "planning", "cli"]
     }
   ]
 }

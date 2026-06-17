@@ -33,6 +33,7 @@ npx skills add myers/claude-plugins -a claude-code -a opencode
 | [dev-plan](#dev-plan) | Interactive planning with in-depth requirements interview. |
 | [find-block](#find-block) | Blocks the 'find' command in Bash tool and suggests using Glob/Grep tools instead. |
 | [fj](#fj) | Forgejo CLI for managing issues, PRs, and project boards. Use when asked to interact with Forgejo repositories. |
+| [goose-exec](#goose-exec) | Delegate plan execution to goose (configured for a cheaper model like DeepSeek) while Claude orchestrates and reviews. |
 | [quest-dev](#quest-dev) | Meta Quest development toolkit. Use for Quest browser debugging, screenshots, battery monitoring, and keeping Quest awake during development. |
 | [woodpecker-cli](#woodpecker-cli) | Woodpecker CI CLI for managing pipelines, repos, secrets, and running local builds. |
 
@@ -84,6 +85,14 @@ Forgejo CLI for managing issues, PRs, and project boards. Use when asked to inte
 
 ```
 /plugin install fj@myers-plugins
+```
+
+### goose-exec
+
+Delegate plan **execution** to [goose](https://github.com/block/goose) — a headless coding agent you've configured to run a cheaper model (e.g. DeepSeek) — while Claude stays the orchestrator and reviewer. Claude plans and reviews; goose grinds through implementation per task; follow-up/rework commands continue in the same goose session so it keeps context. goose's model/provider setup is out of scope.
+
+```
+/plugin install goose-exec@myers-plugins
 ```
 
 ### quest-dev
