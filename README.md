@@ -41,8 +41,10 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 | `find-block` | Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead. |
 | `fj` | Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories. |
 | `goose-exec` | Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply. |
+| `myers-superpowers` | Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official. |
 | `quest-dev` | Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions. |
 | `rust-correctness-by-construction` | Write Rust where illegal states and concurrency bugs are unrepresentable |
+| `tail-head-block` | Blocks piping Bash tool commands to \| tail or \| head. Directs the agent to run in background and Read the output file, keeping large output out of the model context. |
 | `woodpecker-cli` | Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution. |
 
 <!-- END PLUGINS -->
