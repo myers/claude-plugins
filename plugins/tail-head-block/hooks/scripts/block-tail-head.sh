@@ -15,7 +15,7 @@ input=$(cat)
 command=$(echo "$input" | jq -r '.tool_input.command // empty')
 
 if printf '%s' "$command" | grep -qE '\|[[:space:]]*(tail|head)($|[^[:alnum:]_])'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Piping Bash tool output to | tail or | head is blocked.\n\nWhy: tail/head buffer their input until EOF, so foreground Bash loses real-time visibility for the user AND delivers only the filtered tail to the model at the end. Truncating large output into the model'"'"'s context is not the goal.\n\nWhat to do instead:\n1. Re-run this command with run_in_background: true. Output is written to a file and the user can watch it live in their shell pane.\n2. If you need to inspect it yourself, Read the output file (supports offset/limit for partial reads) — the full output should NOT be pushed into the LLM context.\n\nExceptions where no pipe is needed at all:\n- Native limits: git log -20, grep -m 5\n- Line selection: sed -n 1,20p file"}}' >&2
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Blocked: | tail and | head in the Bash tool.\n\nNext call: Bash with run_in_background: true (no pipe). Then if you need to inspect output: Read the output file (offset/limit supported). This keeps output out of your context and lets the user watch it live."}}' >&2
   exit 2
 fi
 
