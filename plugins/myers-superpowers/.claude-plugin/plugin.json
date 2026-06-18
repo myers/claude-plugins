@@ -1,0 +1,21 @@
+{
+  "name": "myers-superpowers",
+  "description": "Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice.",
+  "version": "5.0.7-myers.1",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  },
+  "homepage": "https://github.com/myers/claude-plugins",
+  "repository": "https://github.com/myers/claude-plugins",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "tdd",
+    "debugging",
+    "collaboration",
+    "best-practices",
+    "workflows",
+    "askuserquestion"
+  ]
+}

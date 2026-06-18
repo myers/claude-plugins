@@ -76,6 +76,12 @@
       "source": "./plugins/goose-exec",
       "description": "Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply.",
       "keywords": ["goose", "deepseek", "execution", "orchestration", "planning", "cli"]
+    },
+    {
+      "name": "myers-superpowers",
+      "source": "./plugins/myers-superpowers",
+      "description": "Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official.",
+      "keywords": ["skills", "tdd", "debugging", "collaboration", "askuserquestion"]
     }
   ]
 }
