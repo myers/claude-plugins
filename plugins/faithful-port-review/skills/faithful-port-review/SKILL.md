@@ -47,8 +47,11 @@ no confession in the code.** Do not wait for a comment to warn you.
 
 ## Checklist
 
-Walk the diff (or the whole module, in sweep mode) and for each item produce a
-finding or an explicit "verified faithful, here's how":
+Walk the diff (or the whole module, in sweep mode) and **examine every item** — you
+re-derive each behavior from the reference independently. You **report only the
+divergences** (see Output format); you do *not* write down the ones you found
+faithful. Checking is mandatory; listing the faithful ones is not — "report only
+divergences" must never decay into "skim for obvious bugs."
 
 1. **Wait/poll/retry loops** — timing, empty-result handling, ordering vs the real device (class 1).
 2. **Op dispatch** — for every register/bus/file op, the function the *device* binds, not the generic/cited one (class 2).
@@ -117,22 +120,49 @@ When auditing an existing ported codebase rather than a single diff:
   so each has the budget to actually open the reference.
 - **Adversarially verify** every candidate divergence before reporting it: is it
   truly behavioral, or a justified/CbC one? Majority-refute borderline findings.
-- Report a per-module table: `reviewed / divergences-found / verified-real /
-  CbC-or-justified`. Log what you did **not** cover (a module whose reference you
-  couldn't locate) — silent truncation reads as "audited everything."
+- Report a per-module table of **counts only**: `reviewed / divergences-found /
+  verified-real / CbC-or-justified` (counts, not a faithful enumeration). Log what
+  you did **not** cover (a module whose reference you couldn't locate) — silent
+  truncation reads as "audited everything."
 
-## Output format
+## Output format — caveman voice, divergences only
+
+Write the report like a caveman: short fragments, drop articles/filler, no
+preamble, no praise, no hedging. **No "verified faithful" list** — report ONLY
+divergences (and the coverage log). If a file has no divergence, say "no
+divergence found" — do not pad with what you checked.
+
+You STILL re-derive and check every behavior against the reference. You just do
+not write the faithful ones down. **Checking mandatory; listing not.**
+
+**Caveman the prose, never the technical tokens.** Keep all `code`, commands,
+error strings, `file:line`, reference citations (`ref.c:fn:line`), masks,
+offsets, and wire bytes **byte-exact** — a mangled offset is a wrong review. The
+caveman style ([why](https://github.com/JuliusBrussee/caveman)) changes how the
+report *talks*, not how you *think* or what you verify.
+
+Example — normal vs caveman (same facts, same exact tokens):
+> normal: "The poll loop at `init.rs:39` polls 50 times, whereas the reference
+> do-while at `util.c:31` polls 51 — one iteration short, narrowing the window."
+> caveman: "`init.rs:39` poll 50. ref `util.c:31` do-while poll 51. one short. window tight."
 
 ```
-### Verified faithful
-[behaviors checked against the reference and confirmed — with how you checked]
-### Divergences
-#### Critical (behavioral / wire / device-interaction)
-#### Important (likely behavioral, needs author confirmation)
-#### CbC / justified (divergence-from-C that is intentional and behavior-preserving — NOT a bug)
-[each: file:line, the reference function+line, what differs, why it matters / why it's fine]
-### Assessment
-Ready for silicon/merge? [Yes | No | With fixes]   Reasoning: [...]
+DIVERGENCES
+
+CRITICAL  (behavior / wire / device break)
+- `file:line` vs `ref.c:fn:line`. what differ. why bite. how me check (adversarial).
+
+IMPORTANT  (probably behavior. author confirm)
+- `file:line` vs `ref.c:fn:line`. what differ. why suspect.
+
+MAYBE CbC / justified  (look like divergence. behavior same. NOT bug)
+- `file:line` vs `ref.c:fn:line`. why same bytes. (ask as question, not Critical)
+
+VERDICT
+silicon/merge? [No | with fixes | Yes]. why short.
+
+NOT REACHED  (reference no find / no read. so sweep no lie "all done")
+- ...
 ```
 
 ## Red flags — you are doing it wrong if
@@ -142,6 +172,8 @@ Ready for silicon/merge? [Yes | No | With fixes]   Reasoning: [...]
 - You skipped a wait loop because it "obviously polls correctly" (it polls correctly *against the mock*).
 - You flagged an idiomatic-Rust rewrite as a bug without checking the bytes on the wire are identical.
 - You reported a sweep as complete without listing the modules/references you couldn't reach.
+- You padded the report with a "verified faithful" list, preamble, or praise — output is divergences only, caveman voice, no filler.
+- You caveman-compressed a `file:line`, a mask, an offset, or a wire byte — compress the *prose*, keep every technical token byte-exact.
 
 ## Rationalization table
 
