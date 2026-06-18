@@ -1,6 +1,6 @@
 ---
 name: faithful-port-review
-description: Use when reviewing, finishing, or sweeping a faithful port — code translated from a known-good reference implementation (C driver, protocol, filesystem, algorithm) into Rust or another language — before it merges or runs on real hardware/silicon. Triggers include "faithful port", "ported from FreeBSD/Linux", driver bring-up, a port whose device-free/mock tests are green but is unproven on the real device, sweeping an existing ported codebase for latent reference divergences, or "the diff is the bug".
+description: Use when reviewing, finishing, or sweeping a faithful port — code translated from a known-good reference implementation (C/Rust driver, filesystem, storage engine, protocol, codec, or algorithm) into another language — before it merges or runs against its real counterpart (device/silicon, disk/on-disk format, peer, or production). Triggers include "faithful port", "ported from FreeBSD/Linux/OpenZFS", driver or filesystem bring-up, a port whose mock/device-free tests are green but is unproven against the real device/disk/peer, checksum/endianness/wire-format fidelity, sweeping an existing ported codebase for latent reference divergences, or "the diff is the bug".
 ---
 
 # Faithful-Port Review
@@ -11,11 +11,13 @@ exceptions ledger with evidence, or a numbered tracking issue — never just a
 plausible-sounding comment).
 
 **Core principle: a green test suite proves the port matches the *mock's*
-assumptions, not the *device's*.** Device-free tests are written by the same
-person who wrote the port, against the same mental model. They cannot catch a
-divergence that both the port and the mock share. **This review is the check the
-mock cannot be** — so it is worth running even when every test is green, and
-*especially* then.
+assumptions, not the *real counterpart's*.** The "real counterpart" is whatever
+the port is checked against in production — a device/silicon, a disk and its
+on-disk format, a network peer, the kernel, or a concurrent producer. Mock-based
+tests are written by the same person who wrote the port, against the same mental
+model. They cannot catch a divergence that both the port and the mock share.
+**This review is the check the mock cannot be** — so it is worth running even when
+every test is green, and *especially* then.
 
 This review supplements a normal code review (see superpowers
 `requesting-code-review`); it does not replace it. Run it as the review stage of
@@ -31,19 +33,33 @@ and consistently. So:
 
 - Open the reference yourself. Read the actual function, not the port's citation
   of it.
-- Ask "does this match the **real device/reference**?" not "does this match the
-  cited line / pass the mock?"
+- Ask "does this match the **real reference / counterpart**?" not "does this match
+  the cited line / pass the mock?"
 
-## The three recurring bug classes (grounded in real silicon failures)
+## The three recurring bug classes (grounded in real production failures)
 
-| Class | What it looks like | Why green tests miss it | The catch |
+Each class is its **generic principle** — the lens is the same whether the real
+counterpart is a device, a disk, a peer, the kernel, or a concurrent producer. The
+per-domain instances below are *hooks, not limits*: recognize the **shape**, then
+find your domain's version. Do not dismiss a lens because your port has no
+hardware — *every* port has all three.
+
+| Class | Generic principle (and why green tests miss it) | The catch |
+|---|---|---|
+| **1. Mock-masked timing / ordering / failure** | The mock collapses the counterpart's real *temporal and failure behavior* — it resolves synchronously, in submission order, always succeeding. A wait/poll/retry loop, an ordering assumption, or an error path that is correct against the mock breaks when the real side is slow, reorders, fails transiently, or returns partial. | Every wait / order / error path: still correct if the result arrived *later*, *out of order*, *failed once*, or came back *short*? Compare the budget + retry to the reference's. |
+| **2. Wrong reference variant / dispatch** | The port is byte-faithful to implementation `X` and cites `X`, but the path THIS object / config / platform actually takes binds `Y`. Tests assert against `X`; nothing checks that `X` is the one that runs. | Trace the real dispatch — ops vtable, type-tagged switch, feature-flag gate, endianness / version variant — to the function THIS case binds. Verify against `Y`, not the cited `X`. |
+| **3. Referent identity / lifetime** | Something stores a *reference* to a structure — a pointer, offset, index, id, or a **checksum / hash computed over the bytes** — valid only while the referent stays put and byte-identical. A realloc, rebuild, re-encode, or in-place mutation *after* the reference was captured silently breaks it. | Every captured reference: confirm its referent is the *same, unmodified* bytes / allocation for the reference's whole life — not moved, not re-encoded, not re-checksummed out of step. |
+
+**The same three lenses, instantiated per domain** (find your column; the shape is identical):
+
+| | Device driver | Storage / filesystem (e.g. ZFS / Zarn) | Protocol / codec |
 |---|---|---|---|
-| **Mock-masked timing / async** | A poll/wait/retry loop that bails on the first empty result, no inter-poll delay, assumes ordering. | The mock resolves synchronously, so the loop succeeds on pass 1. Real hardware posts the event ms later → instant timeout. | Every wait loop: would this still be correct if the result arrived *later* than the mock delivers it? Compare the loop's wait budget to the reference's. |
-| **Wrong reference function** | Port is byte-faithful to reference function `X`; doc-comment cites `X`. But the device's ops-vtable binds `Y`. | The port matches `X` perfectly; tests assert against `X`. Nothing checks that `X` is the function this device runs. | Trace the device's ops struct (bus_ops / file_ops / driver vtable): which function does *this* device install for this op? Verify against `Y`, not the cited `X`. |
-| **Hardware-pointer identity / lifetime** | A DMA structure the device caches a pointer to (ring base in a control reg, descriptor-array base, dequeue pointer) gets re-allocated, rebuilt, or moved after the device latched its address. | The mock reads whatever structure you hand it, so a fresh allocation "works". The real device keeps DMAing the *original* address → silent corruption / timeouts. | Any structure whose physical address is programmed into a device register once: confirm it is the *same allocation* for the device's life — moved, never re-allocated. |
+| **1** | poll bails on first empty event; HW posts ms later → timeout | I/O completes out of order; checksum-fail → read-the-other-copy repair path; short read; txg ordering | peer NAKs / retransmits / reorders; decoder fed a chunk split mid-token |
+| **2** | device ops-vtable binds `mt792xu_rr`, not generic `mt76u_rr` | checksum / compress / encrypt fn chosen by dataset props; **byteswap variant chosen by on-disk endianness** (a native-endian hardcode is faithful to the *wrong* variant) | wrong message-version handler; wrong cipher mode for the negotiated suite |
+| **3** | DMA ring base programmed into a register, then reallocated / moved | **block-pointer checksum captured, then the block re-encoded / compressed before write**; a dnode held by object-id across an eviction / realloc | length or CRC computed over a frame that is edited afterward |
 
-These share a root: **the divergence is invisible to a device-free test and has
-no confession in the code.** Do not wait for a comment to warn you.
+These share a root: **the divergence is invisible to a mock and has no confession
+in the code.** Do not wait for a comment to warn you.
 
 ## Checklist
 
@@ -53,11 +69,11 @@ divergences** (see Output format); you do *not* write down the ones you found
 faithful. Checking is mandatory; listing the faithful ones is not — "report only
 divergences" must never decay into "skim for obvious bugs."
 
-1. **Wait/poll/retry loops** — timing, empty-result handling, ordering vs the real device (class 1).
-2. **Op dispatch** — for every register/bus/file op, the function the *device* binds, not the generic/cited one (class 2).
-3. **Device-cached pointers** — rings, descriptor arrays, dequeue pointers: same allocation for the device's life (class 3).
-4. **Constants & wire bytes** — request codes, masks, offsets, endianness pinned to *literal* reference values (a test asserting against the port's own named constant is circular).
-5. **Dropped/added steps** — a "tidy helper" that drops a reference step (a barrier, a re-read, a second write) is a divergence.
+1. **Wait/poll/retry loops** — timing, ordering, empty/partial-result and transient-failure handling vs the real counterpart (class 1).
+2. **Dispatch** — for every op, the concrete implementation THIS object/config/platform binds, not the generic/cited one (class 2).
+3. **Captured references** — pointers, offsets, ids, **checksums/hashes-over-bytes**: the referent stays the same bytes/allocation for the reference's life (class 3).
+4. **Constants & serialized bytes** — request codes, masks, offsets, endianness, on-disk/wire field layouts pinned to *literal* reference values (a test asserting against the port's own named constant is circular).
+5. **Dropped/added/reordered steps** — a "tidy helper" that drops or reorders a reference step (a barrier, a re-read, a second write, a checksum-after-transform) is a divergence.
 6. **Error/edge semantics** — short reads, retries, terminal vs transient errors mapped as the reference maps them.
 
 ## Tolerating correct-by-construction oxidation
@@ -69,11 +85,12 @@ invariants, RAII, `Result` instead of errno, an iterator instead of an index
 loop). **Do not flag a correct-by-construction oxidation as a faithfulness bug.**
 
 Distinguish:
-- **Unfaithful divergence (bug):** changes the *behavior / wire bytes / device
-  interaction* — a different SETUP packet, a dropped barrier, a re-allocated ring.
+- **Unfaithful divergence (bug):** changes the *behavior / serialized bytes /
+  counterpart interaction* — a different SETUP packet, a dropped barrier, a
+  re-allocated ring, a checksum over different bytes, a swapped endianness.
 - **CbC oxidation (good):** preserves behavior exactly while making illegal states
-  unrepresentable — the bytes on the wire and the order of device interactions are
-  identical; only the Rust shape changed.
+  unrepresentable — the bytes (on wire / on disk) and the order of counterpart
+  interactions are identical; only the Rust shape changed.
 
 The test is **observable behavior**, not textual similarity to the C. A faithful
 port is *allowed* to look un-C-like (RAII guard vs goto-cleanup) as long as the
@@ -149,7 +166,7 @@ Example — normal vs caveman (same facts, same exact tokens):
 ```
 DIVERGENCES
 
-CRITICAL  (behavior / wire / device break)
+CRITICAL  (behavior / bytes / counterpart break)
 - `file:line` vs `ref.c:fn:line`. what differ. why bite. how me check (adversarial).
 
 IMPORTANT  (probably behavior. author confirm)
@@ -159,7 +176,7 @@ MAYBE CbC / justified  (look like divergence. behavior same. NOT bug)
 - `file:line` vs `ref.c:fn:line`. why same bytes. (ask as question, not Critical)
 
 VERDICT
-silicon/merge? [No | with fixes | Yes]. why short.
+ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / interop)
 
 NOT REACHED  (reference no find / no read. so sweep no lie "all done")
 - ...
@@ -174,13 +191,16 @@ NOT REACHED  (reference no find / no read. so sweep no lie "all done")
 - You reported a sweep as complete without listing the modules/references you couldn't reach.
 - You padded the report with a "verified faithful" list, preamble, or praise — output is divergences only, caveman voice, no filler.
 - You caveman-compressed a `file:line`, a mask, an offset, or a wire byte — compress the *prose*, keep every technical token byte-exact.
+- You **skipped class 3 because "there's no hardware pointer here"** — class 3 is *any captured reference* (a checksum/hash over bytes, an object-id, an offset, an index), in any domain. A filesystem/protocol port has class-3 bugs too.
+- You decided a lens "doesn't apply to this domain" — all three lenses apply to every port; only the *instance* changes. Find the instance, don't drop the lens.
 
 ## Rationalization table
 
 | Excuse | Reality |
 |---|---|
 | "Tests are green, it's faithful." | Green = matches the mock. The mock shares the port's blind spots. |
-| "The comment says it matches usb.c:81." | The comment is the author's model. Open the reference and check which function the device actually binds. |
-| "It's a faithful port, divergences would be obvious." | The expensive ones have no comment and pass every device-free test. That's why they reach silicon. |
-| "This Rust doesn't look like the C, so it's unfaithful." | Faithful is about device-observable behavior, not textual likeness. Check the wire bytes. |
-| "Re-allocating the ring is cleaner." | The device cached the old address. Cleaner code, orphaned hardware pointer. |
+| "The comment says it matches `ref.c:81`." | The comment is the author's model. Open the reference and check which *variant* THIS case actually runs. |
+| "It's a faithful port, divergences would be obvious." | The expensive ones have no comment and pass every mock test. That's why they reach production. |
+| "This Rust doesn't look like the C, so it's unfaithful." | Faithful is about *counterpart-observable* behavior, not textual likeness. Check the bytes (on wire / on disk). |
+| "Class 3 is about hardware pointers — N/A here." | Class 3 is *any captured reference*: a checksum over bytes, an object-id, an offset. The referent mutating after capture is the bug — hardware or not. |
+| "Re-allocating the ring / re-checksumming after the transform is cleaner." | The reference (device pointer, *or the stored checksum*) was captured over the old bytes. Cleaner code, dangling reference. |
