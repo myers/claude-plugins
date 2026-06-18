@@ -1,0 +1,9 @@
+{
+  "name": "faithful-port-review",
+  "description": "Review, finish, or sweep a faithful port (C-to-Rust driver/protocol/filesystem/algorithm) before it merges or runs on real hardware. A silicon-faithful lens over the standard code-review stage: the green device-free mock can't be the check, so this review is. Covers the recurring divergence classes (mock-masked timing, wrong reference function, hardware-pointer identity) and is tolerant of correct-by-construction oxidation.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}

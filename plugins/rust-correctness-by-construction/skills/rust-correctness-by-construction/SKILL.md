@@ -114,6 +114,30 @@ idiomatic upgrade, kept diffable across resyncs) lives in the **`c-to-rust-port`
 skill. It owns the C-idiom → Rust-tool catalog and the diff-stability discipline,
 and routes back to *this* skill for the deep detail on each type-level technique.
 
+**The idiomatic-upgrade (oxidation) pass is a behavior-preserving refactor — two
+hard rules, both learned from real regressions:**
+
+1. **Don't start oxidizing without a reasonable behavior-pinning test suite.** The
+   tests are the oracle that lets you refactor safely. If the faithful port's
+   tests only cover *degenerate* inputs (e.g. an RMW exercised only via
+   `set`/`clear`, where `val == mask`), they pin nothing — **write the
+   characterization tests first** (assert the reference's observable behavior on
+   the *non-degenerate* cases), then oxidize. Oxidizing against a degenerate suite
+   is oxidizing blind.
+
+2. **The reference's behavior is the spec — do not "fix" it, and do not change
+   what a test asserts.** "Make illegal states unrepresentable" becomes a *trap*
+   here: a deliberate quirk of the reference can look like a bug to design out.
+   Real example — an RMW that writes the caller's `val` **unmasked** (bits outside
+   `mask` survive: `val | (cur & !mask)`) is intentional, not a bug; "clamping
+   `val` to the mask" to make escape unrepresentable is a wire-observable
+   *regression*. The faithful port's behavior-pinning tests must stay green with
+   their assertions **byte-identical** — mechanical retyping (`Reg(0x10)` for
+   `0x10`) is fine, but the moment you rewrite a test's *expected value*, stop:
+   you changed behavior. That is a regression wearing an oxidation costume, not a
+   correctness-by-construction win. (Review companion: the `faithful-port-review`
+   skill checks exactly this.)
+
 ## Reference docs
 
 - `references/type-system-patterns.md` — newtypes, sum types, parse-don't-validate,
