@@ -1,9 +1,0 @@
-{
-  "name": "c-to-rust-port",
-  "description": "Create and maintain a Rust port of a C codebase, including a crate that stays in sync with upstream C long-term",
-  "version": "1.0.0",
-  "author": {
-    "name": "Myers Carpenter",
-    "email": "myers@maski.org"
-  }
-}

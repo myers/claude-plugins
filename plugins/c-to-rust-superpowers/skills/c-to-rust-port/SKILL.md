@@ -76,6 +76,18 @@ diff-stability tags, and the reporting recipe — is in
   churn-gating workflow, reading ownership intent out of C, what *not* to upgrade,
   and the divergence-reporting recipe.
 
+## Execution & review
+
+Planning a port uses `superpowers:writing-plans` — and **this method shapes that
+plan** (the phasing, the per-unit C reference, the diff-stability gating all land
+in the plan). The review gate is the **`faithful-port-reviewer`** template in the
+sibling **`faithful-port-review`** skill; it re-derives the C independently and
+runs per ported unit.
+
+Reconciling correctness-by-construction with faithfulness: **faithful first →
+prove → oxidize only as diff-stability allows → the reviewer verifies any
+oxidation is byte/behavior-identical.**
+
 ## Relationship to `rust-correctness-by-construction`
 
 Clean seam: **this skill = the port workflow; that skill = the technique

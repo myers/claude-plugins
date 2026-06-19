@@ -24,6 +24,14 @@ This review supplements a normal code review (see superpowers
 a faithful-port task, before silicon/merge, and as a standalone **sweep** over an
 existing ported codebase.
 
+## As a review gate
+
+This skill is the **review rung of `c-to-rust-superpowers`**. Dispatch it via the
+sibling `faithful-port-reviewer.md` template to a **fresh subagent given only the
+diff + `{C_REFERENCE_MAPPING}`** — no porter prose, no commit message — so it must
+re-derive the C independently. Its other entry is `remediate` (**sweep mode**),
+which audits a whole existing port rather than a single diff.
+
 ## The one move that defines this review
 
 For every behavior, **re-derive the reference independently — do not trust the
