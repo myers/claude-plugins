@@ -1,6 +1,8 @@
 # Faithful-port skill family (`c-to-rust-superpowers`) — design
 
 **Status:** design (spec only; no build this session) · **Date:** 2026-06-17
+> **Superseded by [`2026-06-19-c-to-rust-superpowers-build-design.md`](2026-06-19-c-to-rust-superpowers-build-design.md)** — the architecture here stands; the four open questions are resolved and the build is done there.
+
 **Decided with:** Myers, via brainstorming. Scope this session = design + committed spec. Building is a
 separate future session (under `superpowers:writing-skills` — see the Iron Law note).
 
