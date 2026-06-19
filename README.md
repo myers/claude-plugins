@@ -34,11 +34,10 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 |--------|-------------|
 | `android-logcat` | Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs. |
 | `bg-output-guard` | Blocks output-truncating filter pipes (\| tail, \| grep, \| head, etc.), stderr suppression (2>/dev/null), and nohup on background Bash commands, and warns on other pipes/redirects, so the harness UI keeps the full log and keeps control of the process. Includes a skill explaining background command output. |
-| `c-to-rust-port` | Create and maintain a Rust port of a C codebase, including a crate that stays in sync with upstream C long-term |
+| `c-to-rust-superpowers` | Orchestrate a C-to-Rust port across the superpowers ladder: new ports, remediating an existing port to standard, or resyncing after upstream C changes. Bundles the translation method (faithful then prove then idiomatic) and a fresh-context faithful-port review gate that re-derives the reference independently. Use when planning, porting, sweeping, resyncing, or reviewing a C-to-Rust port. |
 | `cdp-cli` | Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP. |
 | `code-patterns` | Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions. |
 | `dev-plan` | Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans. |
-| `faithful-port-review` | Review, finish, or sweep a faithful port (C-to-Rust driver/protocol/filesystem/algorithm) before it merges or runs on real hardware. A silicon-faithful lens over the code-review stage: the green device-free mock can't be the check, so this review is. Covers mock-masked timing, wrong reference function, and hardware-pointer-identity divergences; tolerant of correct-by-construction oxidation. |
 | `find-block` | Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead. |
 | `fj` | Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories. |
 | `goose-exec` | Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply. |

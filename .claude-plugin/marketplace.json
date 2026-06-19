@@ -24,10 +24,10 @@
       "keywords": ["debugging", "rust"]
     },
     {
-      "name": "c-to-rust-port",
-      "source": "./plugins/c-to-rust-port",
-      "description": "Create and maintain a Rust port of a C codebase, including a crate that stays in sync with upstream C long-term",
-      "keywords": ["rust", "c", "porting", "c-to-rust", "ffi", "translation"]
+      "name": "c-to-rust-superpowers",
+      "source": "./plugins/c-to-rust-superpowers",
+      "description": "Orchestrate a C-to-Rust port across the superpowers ladder: new ports, remediating an existing port to standard, or resyncing after upstream C changes. Bundles the translation method (faithful then prove then idiomatic) and a fresh-context faithful-port review gate that re-derives the reference independently. Use when planning, porting, sweeping, resyncing, or reviewing a C-to-Rust port.",
+      "keywords": ["rust", "c", "porting", "c-to-rust", "ffi", "translation", "code-review", "faithful-port", "drivers", "silicon"]
     },
     {
       "name": "cdp-cli",
@@ -88,12 +88,6 @@
       "source": "./plugins/myers-superpowers",
       "description": "Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official.",
       "keywords": ["skills", "tdd", "debugging", "collaboration", "askuserquestion"]
-    },
-    {
-      "name": "faithful-port-review",
-      "source": "./plugins/faithful-port-review",
-      "description": "Review, finish, or sweep a faithful port (C-to-Rust driver/protocol/filesystem/algorithm) before it merges or runs on real hardware. A silicon-faithful lens over the code-review stage: the green device-free mock can't be the check, so this review is. Covers mock-masked timing, wrong reference function, and hardware-pointer-identity divergences; tolerant of correct-by-construction oxidation.",
-      "keywords": ["rust", "porting", "code-review", "drivers", "faithful-port", "c-to-rust", "silicon"]
     }
   ]
 }
