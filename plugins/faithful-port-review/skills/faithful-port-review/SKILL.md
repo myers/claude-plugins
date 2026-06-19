@@ -142,6 +142,47 @@ When auditing an existing ported codebase rather than a single diff:
   you did **not** cover (a module whose reference you couldn't locate) — silent
   truncation reads as "audited everything."
 
+### Method gaps (remediate sweep)
+
+A `remediate` sweep brings an existing port up to standard. Faithfulness
+divergences are only half the job — a port can be byte-faithful *today* yet carry
+**method debt** that makes the next bug or the next upstream resync expensive. So
+in a remediate sweep, ALSO run a second pass that flags these three **standards
+gaps**, and report them in a SEPARATE `METHOD GAPS` block, distinct from
+`DIVERGENCES`. A method gap is **not** a faithfulness bug — do not put it in
+`DIVERGENCES`, and do not let a clean `DIVERGENCES` block excuse a method gap.
+
+- **Missing prove-test.** A ported unit with no behavior-pinning / differential
+  test — nothing that pins the *observable* output (wire bytes, register values
+  written, order of counterpart interactions) to a literal reference value.
+  Without it there is **no oracle** that proves the port faithful, and a later
+  oxidation has nothing to keep it honest (this is the "tests are the oracle"
+  smell from the oxidation section, one step earlier: the test never existed). A
+  test that only asserts against the port's own named constant is circular and
+  counts as missing.
+- **Over-oxidation on a hot file.** A `[D-mod]` or `[D-heavy]` *structural*
+  oxidation (see `c-to-rust-port`'s diff-stability tags — `[D-light]` cosmetic,
+  `[D-mod]` re-shaped, `[D-heavy]` re-architected) applied to a reference file
+  with **high upstream churn**. `git log --oneline -- <ref>` the reference (or
+  read a churn note if one is recorded): a file patched often will be resynced
+  often, and every step away from its C shape makes that resync more expensive —
+  **diff-stability debt**. Cross-ref `c-to-rust-port`'s diff-stability gating:
+  heavy oxidation is *earned* on a cold, frozen file, **not** on a hot one. The
+  same `[D-heavy]` oxidation on a file with one commit ever is NOT a gap — judge
+  it by the reference's churn, not by the oxidation alone.
+- **Missing anchor.** A ported `[D-heavy]` region with no
+  `// C: <fn>() <label>:` anchor comment tying it back to the reference. When the
+  upstream diff lands, a heavily re-architected region with no anchor gives the
+  resync **no landing point** — the next porter cannot find where the C function
+  went. `[D-heavy]` earns its keep only if it stays resync-navigable.
+
+Verify each candidate gap the same adversarial way as a divergence: confirm the
+prove-test really is absent (not just renamed), confirm the reference really is
+hot (`git log` it — do not assume), confirm the region really is `[D-heavy]` and
+really has no anchor. A clean port — prove-tests present, no heavy oxidation on
+hot files, anchors on every `[D-heavy]` region — yields an empty `METHOD GAPS`
+block ("no method gap found"), exactly as a faithful module yields no divergence.
+
 ## Output format — caveman voice, divergences only
 
 Write the report like a caveman: short fragments, drop articles/filler, no
@@ -180,6 +221,18 @@ ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / inter
 
 NOT REACHED  (reference no find / no read. so sweep no lie "all done")
 - ...
+```
+
+In a **remediate sweep**, append a SEPARATE block (omit it for a plain
+divergence review; never fold gaps into `DIVERGENCES`):
+
+```
+METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
+- MISSING PROVE-TEST. `unit` (ports `ref.c:fn`). no behavior-pin test. no oracle.
+- OVER-OXIDIZE HOT FILE. `file:line` [D-heavy] on `ref.c` (hot: N commit/month). resync cost.
+- MISSING ANCHOR. `file:line` [D-heavy] region. no `// C: fn() label:`. resync no landing.
+
+(empty -> "no method gap found")
 ```
 
 ## Red flags — you are doing it wrong if
