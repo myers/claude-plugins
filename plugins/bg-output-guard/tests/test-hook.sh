@@ -86,6 +86,19 @@ assert BLOCK "bg cmd &>/dev/null"         'cargo build &>/dev/null'        true
 assert BLOCK "bg cmd >&/dev/null"         'cargo build >&/dev/null'        true
 
 echo
+echo "BLOCK: background + self-built combined console log (> file with 2>&1 duplicates"
+echo "the harness capture and empties the harness output file)"
+assert BLOCK "bg cmd > file 2>&1"         'cargo build > build.log 2>&1'   true
+assert BLOCK "bg cmd >file 2>&1 (no spc)" 'make >out.txt 2>&1'             true
+assert BLOCK "bg cmd >> file 2>&1"        'cargo test >> test.log 2>&1'    true
+assert BLOCK "bg 2>&1 before > file"      'cargo build 2>&1 > build.log'   true
+
+echo
+echo "NOT tier-3: /dev/null discard and bare deliverable (no 2>&1) aren't duplication"
+assert WARN  "bg cmd > /dev/null 2>&1"    'cargo build > /dev/null 2>&1'   true
+assert WARN  "bg deliverable > file"      'pg_dump mydb > backup.sql'      true
+
+echo
 echo "BLOCK: background + nohup (detaches process, diverts output)"
 assert BLOCK "bg nohup cmd"               'nohup cargo build'              true
 assert BLOCK "bg nohup cmd &"             'nohup long-task &'              true
@@ -103,6 +116,7 @@ assert ALLOW "fg nohup cmd"               'nohup cargo build'              false
 assert ALLOW "fg cargo build | tail"      'cargo build 2>&1 | tail -n 50'  false
 assert ALLOW "fg make | grep"             'make | grep error'              false
 assert ALLOW "fg cmd 2>/dev/null"         'cargo build 2>/dev/null'        false
+assert ALLOW "fg cmd > file 2>&1"         'cargo build > build.log 2>&1'   false
 
 echo
 echo "ALLOW: background, clean (no pipe, no redirect)"
@@ -152,6 +166,7 @@ echo "Emitted deny payload is well-formed JSON"
 assert_payload_valid 'cargo build 2>&1 | tail -n 50'
 assert_payload_valid 'make | grep error'
 assert_payload_valid 'cargo build 2>/dev/null'
+assert_payload_valid 'cargo build > build.log 2>&1'
 assert_payload_valid 'nohup cargo build &'
 
 echo

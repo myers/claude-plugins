@@ -1,13 +1,18 @@
 #!/bin/bash
 # PreToolUse hook: block output-truncating filter pipes on BACKGROUND Bash commands.
 #
-# Rationale: when a Bash command runs with run_in_background=true, its stdout/stderr
-# go to a temp output file that the harness UI shows. A trailing "| tail", "| grep",
-# "| head" etc. pre-filters at the pipe, so only the truncated result ever reaches the
-# file -- the rest of the log is lost for both the UI and any later inspection. There is
-# no upside to filtering at the pipe in background mode: the agent can Read the output
-# file with offset/limit, or grep/tail the FILE once the command completes, keeping the
-# full log intact. So we forbid the filter and tell the agent to filter the file instead.
+# Rationale: when a Bash command runs with run_in_background=true, the harness already
+# captures its full stdout+stderr to a temp output file AND returns that file's path in
+# the tool result. The agent should LEAN ON that capture -- Read the file with
+# offset/limit, or grep/tail the path once the command completes -- rather than reshape
+# the stream on the way in or roll its own log file. Two failure modes we police:
+#   1. Truncation: a trailing "| tail"/"| grep"/"| head" pre-filters at the pipe, so only
+#      the lossy result reaches the file -- the rest is gone for the UI and later inspection.
+#   2. Duplication: "> myfile 2>&1" rebuilds the combined console log the harness already
+#      made, and leaves the harness's own output file (the one the UI shows) EMPTY --
+#      reducing visibility, not adding it.
+# Both have no upside in background mode, so we block the clear cases and warn the rest,
+# always pointing the agent back to the output-file path it was handed.
 #
 # Only the FINAL stage of the pipeline is checked -- a filter mid-pipeline (e.g. feeding
 # a later "tee file.log") does not truncate the final output, and "tee" is explicitly
@@ -123,7 +128,7 @@ fi
 if [[ "$skeleton" == *"|"* ]]; then
   final=$(stage_cmd "${skeleton##*|}")
   if is_filter "$final"; then
-    deny "Background command blocked: '| ${final}' truncates the output before it reaches the log file.\n\nWhen a command runs in the background, its full output is written to a temp file that the harness UI shows you. Filtering at the pipe (| ${final}) throws away the rest of the log BEFORE it hits that file -- so it is gone from the UI and from any later inspection, with no upside.\n\nInstead: run the command WITHOUT the trailing filter so the full log goes to the output file, then filter the FILE once it completes:\n  - Read the output file with offset/limit, or\n  - grep / tail the output file path, e.g.  tail -n 50 <output-file>  or  grep ERROR <output-file>\n\n(tee/cat are allowed -- they write a full copy. A filter mid-pipeline that still writes full output downstream is warned, not blocked.)\n\n${SKILL_REF}"
+    deny "Background command blocked: '| ${final}' truncates the output before it reaches the log file.\n\nWhen a command runs in the background, its full output is written to a temp file that the harness UI shows you. Filtering at the pipe (| ${final}) throws away the rest of the log BEFORE it hits that file -- so it is gone from the UI and from any later inspection, with no upside.\n\nYou do not need to capture this yourself: the harness ALREADY wrote the full stdout+stderr to a file AND returned its path to you in the tool result (the 'Output is being written to: <path>' line). Use that path.\n\nInstead: run the command WITHOUT the trailing filter, then read or filter the harness output FILE once it completes:\n  - Read the output file with offset/limit, or\n  - grep / tail that path, e.g.  tail -n 50 <output-file>  or  grep ERROR <output-file>\n\n${SKILL_REF}"
   fi
 fi
 
@@ -138,12 +143,31 @@ if [[ "$no_merge" =~ 2\>[^\&] ]] || [[ "$no_merge" =~ 2\>$ ]] \
   deny "Background command blocked: it redirects stderr away from the log (e.g. 2>/dev/null, 2> file, &>, >&).\n\nIn background mode the harness captures BOTH stdout and stderr to the output file automatically. stderr is where build errors and warnings live -- suppressing or diverting it removes exactly the lines you most want in the log, with no upside.\n\nInstead: run the command WITHOUT the stderr redirect. Both streams are captured for free; filter the output FILE afterward if you need to narrow it down. (2>&1 is fine -- it merges stderr into stdout, which still reaches the file.)\n\n${SKILL_REF}"
 fi
 
+# --- Block tier 3: building your own combined console log (>FILE plus 2>&1) ---
+# "cmd > some.log 2>&1" merges stderr into stdout and sends the whole console
+# stream to a file the AGENT chose. That is exactly what the harness already does
+# in background mode: it writes the full stdout+stderr to its output file and hands
+# back that file's path in the tool result. So this redirect is pure duplication --
+# and worse, it leaves the harness's OWN output file (the one the UI shows the user)
+# empty, reducing visibility instead of adding it. High-precision signature, low
+# false-positive: a 2>&1 merge together with a ">" redirect to a real file (a
+# deliverable like "> backup.sql" is almost never paired with 2>&1, and "> /dev/null"
+# is a deliberate discard -- both excluded here). The agent's pull toward its own
+# file is ergonomic (a predictable name to grep later); the fix is to remind it the
+# harness path is already provided, not to let it roll its own.
+if [[ "$skeleton" == *"2>&1"* ]] && [[ "$no_merge" =~ \>\>?[[:space:]]*([^[:space:]|\&\;\<\>]+) ]]; then
+  tgt="${BASH_REMATCH[1]}"
+  if [[ "$tgt" != "/dev/null" ]]; then
+    deny "Background command blocked: it builds its own combined console log (> ${tgt} ... 2>&1).\n\nMerging stderr into stdout and redirecting it to a file is EXACTLY what the harness already does for a background command -- it captures the full stdout+stderr to an output file and returns that file's path to you in the tool result (the 'Output is being written to: <path>' line). Your redirect just duplicates that, and it leaves the harness's own output file -- the one the user sees in the UI -- empty. So it reduces visibility with no upside.\n\nYou already have the file you want: it is the path in the tool result. Run the command plain (drop '> ${tgt}' and the '2>&1'), then Read or grep/tail that path once it completes. If you want a stable name, the tool-result path is stable for the life of the task -- reference it directly.\n\n${SKILL_REF}"
+  fi
+fi
+
 # --- Warn tier: any other pipe or output redirect -----------------------------
 # Not blocked, but a pipe or output redirect in background mode may still divert or
 # reshape output that would otherwise land in the log file verbatim. Nudge, don't block.
 # "2>&1" is already stripped into $no_merge and is harmless on its own.
 if [[ "$skeleton" == *"|"* ]] || [[ "$no_merge" =~ \>\>? ]]; then
-  warn "Heads-up: this background command contains a pipe or output redirect. In background mode the full output is captured to a log file the user can see -- any pipe or redirect may reshape or divert what reaches that file. If you only meant to narrow the output, prefer running it plain and filtering the output FILE afterward. Proceeding anyway.\n\n${SKILL_REF}"
+  warn "Heads-up: this background command contains a pipe or output redirect. In background mode the harness already captures the full stdout+stderr to an output file and returns its path to you in the tool result ('Output is being written to: <path>') -- so you usually do NOT need a redirect of your own. A pipe or redirect here may reshape or divert what reaches that file, and if you are redirecting just to capture a log, you are duplicating the harness and emptying the file the user sees. If you only meant to narrow the output, run it plain and grep/tail that returned path afterward. Proceeding anyway.\n\n${SKILL_REF}"
 fi
 
 exit 0
