@@ -1,12 +1,24 @@
 ---
 name: quest-dev
-description: Meta Quest development toolkit. Use for Quest browser debugging, screenshots, battery monitoring, and keeping Quest awake during development. Provides CDP debugging, ADB utilities, and workflow automation.
+description: Use whenever a task touches a Meta Quest / Quest 3 / Quest headset or runs adb against it — deploying an APK, capturing logcat, taking screenshots, debugging the Quest browser over CDP, checking battery, or keeping the headset awake. Raw adb can wedge the Quest's VR power stack; this skill provides the safe quest-dev equivalents (deploy, logcat, screenshot, stay-awake).
 allowed-tools: Bash, Read, Grep, Glob, Write
 ---
 
 # Quest Dev Skill
 
 Command-line toolkit for Meta Quest Browser development via ADB and Chrome DevTools Protocol (CDP).
+
+<EXTREMELY-IMPORTANT>
+**If there is even a 1% chance your task touches a Meta Quest, you MUST operate from this skill.** Deploying an APK, reading logs, screenshots, CDP/browser debugging, and keeping the headset awake all go through `quest-dev` — never raw `adb`.
+
+**Violating the letter of this rule violates its spirit.** Raw `adb` reaches the wrong layer of the Quest's VR power stack and can wedge it into a reboot-only state.
+
+Red flags — STOP and use the quest-dev equivalent:
+- "It's just one `adb install`" → `quest-dev deploy <apk>`
+- "I'll grab logs with `adb logcat`" → `quest-dev logcat`
+- "I'll force-stop / wake it with adb" → `quest-dev stay-awake`
+- "I know adb, this is faster" → the VR power layer is the trap, not adb syntax
+</EXTREMELY-IMPORTANT>
 
 ## Prerequisites
 
@@ -25,11 +37,24 @@ Should show your Quest device.
 
 | Command | Purpose |
 |---------|---------|
+| `quest-dev deploy <apk>` | Install + launch + crash-check an APK (use instead of `adb install`) |
 | `quest-dev open <url>` | Open URL with CDP debugging |
 | `quest-dev screenshot <dir>` | Take Quest screenshots |
 | `quest-dev battery` | Check battery status |
 | `quest-dev stay-awake` | Keep Quest awake during work |
 | `quest-dev logcat <action>` | Capture Android logs |
+
+---
+
+## Deploying an APK
+
+**Always deploy with `quest-dev deploy`, never `adb install`.**
+
+```bash
+quest-dev deploy path/to/app.apk
+```
+
+This auto-starts the daemon, enables stay-awake, installs the APK, launches the app, and checks for an immediate crash — replacing the whole `adb install` + `adb shell am start` + `pidof` dance with one command. A bare `adb install` skips the daemon, stay-awake, launch, and crash check and can leave the Quest in a bad state, so the PreToolUse hook blocks it and points you here.
 
 ---
 
@@ -383,6 +408,7 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 
 | Dangerous Command | Why | Use Instead |
 |---|---|---|
+| `adb install -r <apk>` | Skips the daemon, stay-awake, app launch, and crash check; can leave the Quest in a bad state | `quest-dev deploy <apk>` |
 | `adb shell am broadcast -a com.oculus.vrpowermanager.automation_enable` | Conflicts with stay-awake's enable/disable pairing; leaves automation stuck on | `quest-dev stay-awake` |
 | `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` | Conflicts with stay-awake proximity management | `quest-dev stay-awake` |
 | `adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable` | Conflicts with stay-awake cleanup | `quest-dev stay-awake --disable` |
@@ -398,8 +424,7 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 
 ### What IS safe to run directly:
 
-- `adb install -r <apk>` — install your app
-- `adb shell am start -n <component>` — launch your app
+- `adb shell am start -n <component>` — launch your app (or just use `quest-dev deploy`, which launches for you)
 - `adb shell am force-stop <your.app.package>` — stop YOUR app only
 - `adb shell pidof <package>` — check if a process is running
 - `adb shell dumpsys activity activities | grep <package>` — check foreground state
@@ -426,4 +451,4 @@ The Quest has a **layered power management system**: Android's standard power ma
 
 ## Version
 
-Requires quest-dev CLI v1.3.0+. Requires Quest OS v44+.
+Requires quest-dev CLI v2.4.0+ (for `quest-dev deploy`). Requires Quest OS v44+.

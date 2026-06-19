@@ -1,7 +1,7 @@
 {
   "name": "quest-dev",
-  "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
-  "version": "1.1.0",
+  "description": "Meta Quest development toolkit: a quest-dev skill plus hooks that block bypass-prone raw adb (adb logcat, adb install) and redirect to quest-dev (logcat, deploy), keep the Quest awake during sessions, and forcefully assert the skill must be loaded for Quest work.",
+  "version": "1.2.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"

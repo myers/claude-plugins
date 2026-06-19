@@ -6,6 +6,7 @@ Meta Quest development toolkit for Claude Code. Provides comprehensive documenta
 
 ### 1. Quest Dev Skill
 Comprehensive guide for using the `quest-dev` CLI toolkit:
+- Deploying APKs with `quest-dev deploy` (install + launch + crash-check)
 - Opening URLs with CDP debugging
 - Taking screenshots with captions
 - Battery monitoring
@@ -14,7 +15,17 @@ Comprehensive guide for using the `quest-dev` CLI toolkit:
 
 Invoke with the skill system: `/quest-dev` or when Claude Code needs Quest development guidance.
 
-### 2. PostToolUse Hook
+### 2. PreToolUse ADB Guard (`block-adb.sh`)
+Blocks raw `adb` commands that should go through the `quest-dev` CLI and tells the agent the correct command instead:
+- `adb logcat` → `quest-dev logcat` (Quest's ring buffer overflows in seconds; raw logcat loses crash logs)
+- `adb install` / `adb install-multiple` → `quest-dev deploy <apk>` (raw install skips the daemon, stay-awake, app launch, and crash check)
+
+It deliberately does not block `adb uninstall` or `adb shell pm install`. One script handles both checks, so only one process runs per Bash call.
+
+### 3. SessionStart Skill-Load Assertion (`assert-quest-skill.sh`)
+Injects a forceful, once-per-session reminder (modeled on superpowers) that any Meta Quest / adb work MUST go through the quest-dev skill. Fires once per session via the SessionStart event — no marker file.
+
+### 4. PostToolUse Hook
 Automatically keeps Quest awake during active Claude Code sessions by sending SIGUSR1 signals to the `quest-dev stay-awake` process after each tool execution. This resets the idle timer, preventing Quest from sleeping while you work.
 
 ## How It Works
@@ -41,7 +52,7 @@ The hook:
 
 ## Requirements
 
-- `quest-dev` CLI v1.3.0+
+- `quest-dev` CLI v2.4.0+ (for `quest-dev deploy`)
 - Quest device connected via ADB
 - Quest OS v44+
 - Meta Store PIN configured
@@ -96,10 +107,13 @@ quest-dev stay-awake --disable --pin 1234
 ## Files
 
 - `.claude-plugin/plugin.json` - Plugin metadata
-- `hooks/hooks.json` - PostToolUse hook configuration
+- `hooks/hooks.json` - PreToolUse / SessionStart / PostToolUse hook configuration
+- `hooks/scripts/block-adb.sh` - PreToolUse ADB guard (logcat + install)
+- `hooks/scripts/assert-quest-skill.sh` - SessionStart skill-load assertion
 - `hooks/scripts/send-stay-awake-signal.sh` - Signal sender script
+- `tests/test-hook.sh` - Hook test suite
 - `README.md` - This file
 
 ## Version
 
-1.0.0
+1.2.0
