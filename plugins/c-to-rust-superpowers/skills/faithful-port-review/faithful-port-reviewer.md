@@ -29,7 +29,8 @@ Subagent (general-purpose):
     defines the three recurring divergence classes, the correct-by-construction
     (CbC) oxidation tolerance, and the caveman / divergences-only output format
     you MUST use. This prompt does not restate the skill — it dispatches you
-    through it. If you have not read that skill, stop and read it now.
+    through it. If you cannot locate or load the skill, proceed using the
+    divergence classes, CbC guidance, and output format inlined below.
 
     ## What changed
 

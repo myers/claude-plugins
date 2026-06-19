@@ -86,11 +86,12 @@ divergences" must never decay into "skim for obvious bugs."
 
 ## Tolerating correct-by-construction oxidation
 
-The faithful-first/oxidize-second method (`docs/faithful-port-method.md`)
-deliberately produces a *second* version that **diverges from the C on purpose** —
-idiomatic Rust that makes a bug class unrepresentable (typestate, newtype
-invariants, RAII, `Result` instead of errno, an iterator instead of an index
-loop). **Do not flag a correct-by-construction oxidation as a faithfulness bug.**
+The faithful-first/oxidize-second method (the faithful → prove → idiomatic method
+of the `c-to-rust-port` skill) deliberately produces a *second* version that
+**diverges from the C on purpose** — idiomatic Rust that makes a bug class
+unrepresentable (typestate, newtype invariants, RAII, `Result` instead of errno,
+an iterator instead of an index loop). **Do not flag a correct-by-construction
+oxidation as a faithfulness bug.**
 
 Distinguish:
 - **Unfaithful divergence (bug):** changes the *behavior / serialized bytes /
