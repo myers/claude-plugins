@@ -1,0 +1,9 @@
+{
+  "name": "c-to-rust-superpowers",
+  "description": "Orchestrate a C-to-Rust port across the superpowers ladder: new ports, remediating an existing port to standard, or resyncing after upstream C changes. Bundles the translation method (faithful then prove then idiomatic) and a fresh-context faithful-port review gate that re-derives the reference independently. Use when planning, porting, sweeping, resyncing, or reviewing a C-to-Rust port.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
