@@ -199,6 +199,39 @@ quest-dev screenshot . -c "Debug UI visible"
 
 ---
 
+## Casting
+
+quest-dev can cast the Quest's live VR view to your computer. This needs a casting APK
+that ships inside Meta Quest Developer Hub (MQDH).
+
+**One-time setup** — extract the APK from MQDH (auto-detected on macOS if installed):
+
+```bash
+quest-dev setup-cast                                            # auto-detect MQDH
+quest-dev setup-cast "/Applications/Meta Quest Developer Hub.app"
+quest-dev setup-cast ~/Downloads/MetaQuestDeveloperHub.dmg      # .dmg
+quest-dev setup-cast ~/Downloads/Meta-Quest-Developer-Hub.exe.zip  # Windows (needs 7z)
+```
+
+The APK is cached at `~/.local/share/quest-dev/` and auto-installed on the Quest when
+casting starts. Download MQDH from https://developer.oculus.com/meta-quest-developer-hub.
+
+**Start casting** — the daemon serves a dashboard and a cast endpoint:
+
+```bash
+quest-dev start                          # prints Dashboard URL + cast/start curl
+curl -X POST http://localhost:<port>/cast/start
+```
+
+**Grab a VR frame** — unlike `screenshot` (compositor view), `cast-screenshot` writes a
+validated per-eye/stereo JPEG from the cast stream:
+
+```bash
+quest-dev cast-screenshot ~/Desktop
+```
+
+---
+
 ## 3. Battery Status
 
 **Shows Quest battery percentage and charging state in one line.**
