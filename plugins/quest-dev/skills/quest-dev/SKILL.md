@@ -394,6 +394,15 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 
 **cdp-cli** plugin — General-purpose Chrome DevTools Protocol CLI for inspecting, controlling, and debugging any CDP-compatible browser. Use after `quest-dev open` to interact with pages via console, eval, screenshot, network, click, and fill commands.
 
+## Where State Lives (XDG)
+
+| What | Location |
+|------|----------|
+| Daemon registry + PID files | `$XDG_RUNTIME_DIR/quest-dev/` (or `~/.local/state/quest-dev/run/` on macOS) |
+| Logcat output | `$XDG_STATE_HOME/quest-dev/logcat/<serial>/` (default `~/.local/state/quest-dev/logcat/<serial>/`) |
+| Aliases + config | `$XDG_CONFIG_HOME/quest-dev/` (default `~/.config/quest-dev/`) |
+| Casting APK | `$XDG_DATA_HOME/quest-dev/` (default `~/.local/share/quest-dev/`) |
+
 ## CRITICAL: Do Not Bypass quest-dev With Raw ADB Commands
 
 **The following raw ADB commands will put the Quest into a broken state requiring a reboot.** Always use `quest-dev` commands instead — they handle enable/disable pairing and cleanup properly.
@@ -405,7 +414,7 @@ grep -i "crash\|fatal" logs/logcat/*.txt
 | `adb install -r <apk>` | Skips the daemon, stay-awake, app launch, and crash check; can leave the Quest in a bad state | `quest-dev deploy <apk>` |
 | `adb shell am broadcast -a com.oculus.vrpowermanager.automation_enable` | Conflicts with stay-awake's enable/disable pairing; leaves automation stuck on | `quest-dev stay-awake` |
 | `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` | Conflicts with stay-awake proximity management | `quest-dev stay-awake` |
-| `adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable` | Conflicts with stay-awake cleanup | `quest-dev stay-awake --disable` |
+| `adb shell am broadcast -a com.oculus.vrpowermanager.automation_disable` | Conflicts with stay-awake cleanup | `quest-dev stay-awake --off` |
 | `adb shell svc power stayon true` | Conflicts with Quest VR power management layer | `quest-dev stay-awake` |
 | `adb shell settings put system screen_off_timeout ...` | Conflicts with stay-awake timeout management | `quest-dev stay-awake` |
 | `adb shell settings put global stay_on_while_plugged_in ...` | Conflicts with Quest VR power management | `quest-dev stay-awake` |
@@ -445,4 +454,4 @@ The Quest has a **layered power management system**: Android's standard power ma
 
 ## Version
 
-Requires quest-dev CLI v2.4.0+ (for `quest-dev deploy`). Requires Quest OS v44+.
+Requires quest-dev CLI v2.5.0+. Requires Quest OS v44+.
