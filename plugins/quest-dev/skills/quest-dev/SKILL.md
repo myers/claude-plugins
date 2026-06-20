@@ -53,6 +53,50 @@ Should show your Quest device.
 
 ---
 
+## Daemon Model
+
+`start`, `stay-awake`, `deploy`, and `logcat` are backed by a single **per-device
+daemon**, keyed on the Quest's stable hardware serial. The daemon binds an
+OS-assigned HTTP port and exposes a deterministic per-serial CDP port, so two
+Quests (or two agents) never collide.
+
+- First command that needs it auto-starts the daemon.
+- `quest-dev ping` resets its idle timer — run it during a long session so the
+  daemon doesn't idle out.
+- `quest-dev stop` shuts the daemon down and restores Quest settings.
+
+## Multiple Devices
+
+Every command targets one device. Select it with the global `--device <ref>` flag,
+where `<ref>` is an **alias**, a raw **address** (`127.0.0.1:5555`,
+`quest3.home.arap:5555`), or a **serial**. Or set `QUEST_DEVICE` once per shell:
+
+```bash
+export QUEST_DEVICE=quest3
+quest-dev stay-awake
+quest-dev open http://localhost:3000/
+```
+
+**Resolution order:** `--device` → `$QUEST_DEVICE` → saved `config.device` → the single
+connected device (if exactly one). With one Quest connected, no flag is needed.
+
+**Aliases** (for devices whose address moves — SSH tunnel vs. `*.home.arap` on the LAN):
+
+```bash
+quest-dev device set quest3 127.0.0.1:5555        # connects, records the serial
+quest-dev device set quest3 quest3.home.arap:5555 # later, after it moved
+quest-dev device list                             # alias, address, serial, daemon state
+quest-dev device info quest3                       # serial, address, daemon/CDP/cast ports, stay-awake, battery
+quest-dev device info quest3 --json                # agent-friendly
+quest-dev device rm quest3
+```
+
+The alias maps to a current address; the hardware serial keeps each device's daemon,
+logs, and ports consistent across moves. Two agents driving two headsets just set a
+different `$QUEST_DEVICE` (or `--device`) — per-serial state means no cross-talk.
+
+---
+
 ## Deploying an APK
 
 **Always deploy with `quest-dev deploy`, never `adb install`.**
