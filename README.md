@@ -32,7 +32,6 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 
 | Plugin | Description |
 |--------|-------------|
-| `android-logcat` | Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs. |
 | `bg-output-guard` | Blocks output-truncating filter pipes (\| tail, \| grep, \| head, etc.), stderr suppression (2>/dev/null), and nohup on background Bash commands, and warns on other pipes/redirects, so the harness UI keeps the full log and keeps control of the process. Includes a skill explaining background command output. |
 | `c-to-rust-superpowers` | Orchestrate a C-to-Rust port across the superpowers ladder: new ports, remediating an existing port to standard, or resyncing after upstream C changes. Bundles the translation method (faithful then prove then idiomatic) and a fresh-context faithful-port review gate that re-derives the reference independently. Use when planning, porting, sweeping, resyncing, or reviewing a C-to-Rust port. |
 | `cdp-cli` | Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP. |

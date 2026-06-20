@@ -12,12 +12,6 @@
       "keywords": ["hooks", "bash", "background", "tail", "grep", "output", "nohup"]
     },
     {
-      "name": "android-logcat",
-      "source": "./plugins/android-logcat",
-      "description": "Captures and analyzes Android logcat for Quest/Android debugging. Use when testing APKs, debugging crashes, or analyzing Android logs.",
-      "keywords": ["android", "logcat", "quest", "debugging", "vr"]
-    },
-    {
       "name": "rust-correctness-by-construction",
       "source": "./plugins/rust-correctness-by-construction",
       "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
