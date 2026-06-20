@@ -221,102 +221,47 @@ quest-dev battery
 
 ## 4. Stay Awake (Critical for Development)
 
-**Keeps Quest awake during active development sessions. Disables autosleep, guardian boundary, and system dialogs. Monitors battery and auto-exits on low charge.**
+Keeps the Quest awake by turning off autosleep, guardian, dialogs, and proximity via
+the Meta Scriptable Testing API. Runs through the per-device daemon and spawns a
+watchdog so settings are restored even if the parent dies.
 
 ```bash
-quest-dev stay-awake [--pin <pin>] [--idle-timeout <ms>] [--low-battery <percent>]
+quest-dev stay-awake            # PIN from saved config
+quest-dev stay-awake --pin 1234 # explicit PIN
+quest-dev stay-awake --status   # show current protection state, change nothing
+quest-dev stay-awake --off      # restore protections and exit
 ```
 
-### How It Works
-
-1. Disables autosleep, guardian, and system dialogs on Quest
-2. Wakes the Quest screen
-3. Monitors battery every 60 seconds, logging at 5% boundaries (95%, 90%, 85%...)
-4. Auto-exits and restores settings at low battery (default: 10%)
-5. Monitors for activity via SIGUSR1 signals with idle timeout
-6. Child watchdog process ensures cleanup even if parent is killed (TaskStop, terminal close, etc.)
-
-### PIN Configuration
-
-The PIN is your Meta Store PIN for the logged-in account. It can be provided via:
-
-1. `--pin <pin>` CLI flag (highest priority)
-2. `.quest-dev.json` in current directory: `{ "pin": "1234" }`
-3. `~/.config/quest-dev/config.json` (same format, fallback)
-
-### Examples
+**PIN** — a PIN value is required (your Meta Store PIN). Provide it via `--pin`, or
+save it once so you never pass the flag again (preferred):
 
 ```bash
-# Using PIN from config file
-quest-dev stay-awake
-
-# Explicit PIN
-quest-dev stay-awake --pin 1234
-
-# Custom idle timeout: 10 minutes
-quest-dev stay-awake --idle-timeout 600000
-
-# Custom low battery threshold
-quest-dev stay-awake --low-battery 20
-
-# Check current property values
-quest-dev stay-awake --status
-
-# Manually restore all properties (if process was killed)
-quest-dev stay-awake --disable --pin 1234
+quest-dev config --pin 1234     # → ~/.config/quest-dev/config.json
+# or .quest-dev.json in the project: { "pin": "1234" }
 ```
 
-### Options
+**Flags:**
 
-- `--pin <pin>`: Meta Store PIN (or set in config files)
-- `--idle-timeout <ms>` (alias `-i`): Idle timeout in milliseconds (default: 300000 = 5 minutes)
-- `--low-battery <percent>`: Exit when battery drops to this level (default: 10)
-- `--status`: Show current property values and exit
-- `--disable`: Manually restore all test properties and exit
+- `--pin <pin>` — Meta Store PIN (or saved config, above)
+- `--idle-timeout <ms>` (`-i`) — exit after inactivity (default 300000 = 5 min)
+- `--low-battery <percent>` — exit when battery hits this level, unplugged (default 10)
+- `--unplugged-timeout <ms>` — exit after this long unplugged (default 300000; `0`
+  disables; brief unplugs are forgiven)
+- `--off` — restore all protections and exit
+- `--status` — print current protection state and exit
 
-### Behavior
+**Activity signaling** — reset the idle timer from another process. The PID file is
+per-serial under the XDG runtime dir:
 
-- **Active sessions**: As long as Claude Code tools execute, Quest stays awake (hooks send SIGUSR1)
-- **Idle detection**: After configured timeout with no activity, automatically exits and restores settings
-- **Battery monitoring**: Logs battery at every 5% boundary crossing; auto-exits at low threshold (not charging only)
-- **Manual exit**: Press Ctrl-C to immediately restore settings
-- **Crash protection**: Child watchdog process detects parent death and restores settings to prevent battery drain
-
-### Integration with Claude Code
-
-This plugin includes a PostToolUse hook that automatically signals stay-awake after each tool execution. Just run `quest-dev stay-awake` once and it will stay active during your entire Claude Code session.
-
-**Recommended Workflow:**
 ```bash
-# Terminal 1: Start stay-awake (PIN from .quest-dev.json)
-quest-dev stay-awake
-
-# Terminal 2: Work in Claude Code
-claude -c
-# Quest stays awake automatically while you work
-# Battery status logged at 5% intervals
-# After 5 minutes of no activity, Quest returns to normal
+kill -USR1 $(cat "$XDG_RUNTIME_DIR/quest-dev/stay-awake-<serial>.pid")
+# macOS / no XDG_RUNTIME_DIR: ~/.local/state/quest-dev/run/stay-awake-<serial>.pid
 ```
 
-### Troubleshooting
+A PostToolUse hook in this plugin signals stay-awake automatically after each tool
+runs, so a single `quest-dev stay-awake` stays active for the whole session.
 
-**Quest still sleeping?**
-- Verify stay-awake is running: `ps aux | grep stay-awake`
-- Check PID file: `cat ~/.quest-dev-stay-awake.pid`
-- Test signal manually: `kill -USR1 $(cat ~/.quest-dev-stay-awake.pid)`
-
-**Can't start (already running)?**
-- Another instance is active: `kill $(cat ~/.quest-dev-stay-awake.pid)`
-
-**Settings stuck after unexpected kill?**
-If stay-awake is killed without cleanup (kill -9, power loss), manually restore:
-```bash
-quest-dev stay-awake --disable --pin 1234
-```
-Or check current state:
-```bash
-quest-dev stay-awake --status
-```
+Requires Quest OS v44+.
 
 ---
 
