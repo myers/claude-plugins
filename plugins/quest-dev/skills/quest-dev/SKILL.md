@@ -77,8 +77,7 @@ quest-dev stay-awake
 quest-dev open http://localhost:3000/
 ```
 
-**Resolution order:** `--device` → `$QUEST_DEVICE` → saved `config.device` → the single
-connected device (if exactly one). With one Quest connected, no flag is needed.
+**Resolution order:** `--device` → `$QUEST_DEVICE` → saved `config.device` (only when exactly one device is connected — with 2+ connected and no explicit `--device`/`$QUEST_DEVICE`, the command errors and asks you to choose) → the single connected device (if exactly one). With one Quest connected, no flag is needed.
 
 **Aliases** (for devices whose address moves — SSH tunnel vs. `*.home.arap` on the LAN):
 
