@@ -1,6 +1,6 @@
 ---
 name: quest-dev
-description: Use whenever a task touches a Meta Quest / Quest 3 / Quest headset or runs adb against it — deploying an APK, capturing logcat, taking screenshots, debugging the Quest browser over CDP, checking battery, or keeping the headset awake. Raw adb can wedge the Quest's VR power stack; this skill provides the safe quest-dev equivalents (deploy, logcat, screenshot, stay-awake).
+description: Use whenever a task touches a Meta Quest / Quest 3 / Quest headset or runs adb against it — deploying an APK, capturing logcat, taking screenshots, casting the VR view, debugging the Quest browser over CDP, checking battery, controlling several headsets at once, or keeping the headset awake. Raw adb can wedge the Quest's VR power stack; this skill provides the safe quest-dev equivalents (deploy, logcat, screenshot, cast, stay-awake) and a per-device daemon so multiple Quests never collide.
 allowed-tools: Bash, Read, Grep, Glob, Write
 ---
 
@@ -38,11 +38,18 @@ Should show your Quest device.
 | Command | Purpose |
 |---------|---------|
 | `quest-dev deploy <apk>` | Install + launch + crash-check an APK (use instead of `adb install`) |
-| `quest-dev open <url>` | Open URL with CDP debugging |
-| `quest-dev screenshot <dir>` | Take Quest screenshots |
-| `quest-dev battery` | Check battery status |
-| `quest-dev stay-awake` | Keep Quest awake during work |
-| `quest-dev logcat <action>` | Capture Android logs |
+| `quest-dev open <url>` | Open URL in Quest browser with CDP port forwarding |
+| `quest-dev screenshot <dir>` | Take a Quest screenshot, pull it locally |
+| `quest-dev cast-screenshot <dir>` | Capture a per-eye/stereo VR frame from the cast daemon |
+| `quest-dev battery` | Show battery percentage and charging state |
+| `quest-dev start` | Start the per-device daemon (stay-awake + casting dashboard) |
+| `quest-dev stay-awake` | Keep the Quest awake during work (via daemon) |
+| `quest-dev stop` | Stop the daemon (restores Quest settings) |
+| `quest-dev ping` | Reset the daemon's idle timer during a long session |
+| `quest-dev logcat <action>` | Capture Android logs (`start`/`stop`/`status`/`tail`) |
+| `quest-dev device <action>` | Manage device aliases + inspect ports (`set`/`list`/`rm`/`info`) |
+| `quest-dev config` | Save defaults (PIN, ports, timeouts) |
+| `quest-dev setup-cast [source]` | Extract the casting APK from Meta Quest Developer Hub |
 
 ---
 
