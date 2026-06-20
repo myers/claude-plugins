@@ -267,68 +267,34 @@ Requires Quest OS v44+.
 
 ## 5. Logcat Capture
 
-**Captures Android logcat to files. CRITICAL: Always start before testing to avoid losing crash logs.**
+Captures Android logcat through the per-device daemon. The Quest ring buffer fills in
+seconds under VR load — always `start` before reproducing a bug.
 
 ```bash
-quest-dev logcat <action>
+quest-dev logcat start                 # clears the buffer, starts capturing
+quest-dev logcat start --filter "*:W"  # warnings and above only
+quest-dev logcat status                # capturing? which file?
+quest-dev logcat stop                  # stop, print file + size
 ```
 
-### Actions
-
-| Action | Description |
-|--------|-------------|
-| `start` | Start capturing (clears buffer first) |
-| `stop` | Stop capturing and show file info |
-| `status` | Check if capturing, show file path |
-| `tail` | Live tail of current capture |
-
-### Examples
+**`tail` is a pure `tail(1)` pass-through** over the current capture file — it forwards
+its arguments straight to `tail`:
 
 ```bash
-# Start capturing before testing
-quest-dev logcat start
-
-# Capture only warnings and above
-quest-dev logcat start --filter "*:W"
-
-# Capture only Chromium logs
-quest-dev logcat start --filter "chromium:V *:S"
-
-# Check capture status
-quest-dev logcat status
-
-# Watch logs live
-quest-dev logcat tail
-
-# Stop when done
-quest-dev logcat stop
+quest-dev logcat tail          # last 10 lines (tail default)
+quest-dev logcat tail -f       # stream until Ctrl-C
+quest-dev logcat tail -n 500   # last 500 lines, then exit (good for scripts)
 ```
 
-### Options
+**Log files** live under `$XDG_STATE_HOME/quest-dev/logcat/<serial>/` (default
+`~/.local/state/quest-dev/logcat/<serial>/`), with a `latest.txt` symlink to the
+active capture. Filters use standard logcat syntax (`*:W`, `chromium:V *:S`, `*:E`).
 
-- `--filter <expression>`: Logcat filter expression
-  - `*:W` - Warnings and above only
-  - `chromium:V *:S` - Chromium verbose, silence everything else
-  - `*:E` - Errors only
-
-### Log Files
-
-Saved to `./logs/logcat/` with timestamped filenames: `logcat_YYYY-MM-DD_HH-MM-SS.txt`
-
-### Analysis After Capture
+After capture, grep the file for crashes/WebXR/Chromium errors as usual:
 
 ```bash
-# Find crashes
-grep -i "fatal\|crash\|exception" logs/logcat/*.txt
-
-# WebXR/OpenXR errors
-grep -iE "openxr|webxr|xrdevice" logs/logcat/*.txt
-
-# Chromium errors
-grep -E "cr_.*error|chromium.*error" logs/logcat/*.txt
+grep -iE "fatal|crash|exception" "$(readlink -f ~/.local/state/quest-dev/logcat/<serial>/latest.txt)"
 ```
-
-**CRITICAL**: Android's ring buffer fills in seconds on Quest. Always capture to file BEFORE reproducing bugs or crashes.
 
 ---
 
