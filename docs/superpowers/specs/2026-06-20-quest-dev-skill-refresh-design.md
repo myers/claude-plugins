@@ -41,7 +41,7 @@ quest-dev skill forbids. Keeping it invites the failure mode quest-dev exists to
 | stay-awake `--disable` | Flag renamed to `--off`; `--status` retained (`index.ts:354`) | Fix |
 | stay-awake flags pin/idle/low-battery | Adds `--unplugged-timeout` (default 300000ms, `0` disables, forgives brief unplugs) (`stay-awake.ts:172`, `index.ts:350`) | Add |
 | stay-awake = foreground process | Daemon-delegated: `stay-awake` enables via daemon; direct path kept only for `--off`/`--status` fallback. `start` and `deploy` also enable it (`index.ts:332`) | Reframe |
-| `--pin` required | Confirmed: `loadPin()` feeds the Scriptable Testing API to set/restore protections (`stay-awake.ts:91,166,221`). README dropped `--pin` from its list; source keeps it | Keep `--pin` |
+| `--pin` required | A PIN *value* is required, but the *flag* is not: `loadPin()` resolves `--pin → config.pin → error/exit` (`config.ts:68`), so a PIN saved via `quest-dev config --pin`, `.quest-dev.json`, or `~/.config/quest-dev/config.json` satisfies it with no flag. The PIN feeds the Scriptable Testing API to set/restore protections (`stay-awake.ts:91,166,221`). README dropped `--pin` from its list; source keeps it | Document `--pin` as one of several PIN sources, config preferred |
 | PID file `~/.quest-dev-stay-awake.pid` | `runtimeDir()/stay-awake-<serial>.pid` = `$XDG_RUNTIME_DIR/quest-dev/`, or `~/.local/state/quest-dev/run/` when `XDG_RUNTIME_DIR` unset (macOS) (`paths.ts:17`, `stay-awake.ts:103`) | Fix |
 | logcat actions start/stop/status/**tail** (all equal) | start/stop/status are daemon-delegated; `tail` is a pre-yargs `tail(1)` pass-through forwarding `-f`, `-n N` (`index.ts:204–222`) | Fix tail semantics |
 | Logs in `./logs/logcat/` | `$XDG_STATE_HOME/quest-dev/logcat/<serial>/` with a `latest.txt` symlink (README §Logcat, `paths.ts`) | Fix |
@@ -64,7 +64,7 @@ skill's reason to exist. Layer the new surface on top:
    `ping` resets its idle timer, `stop` shuts it down. OS-assigned HTTP port; deterministic per-serial CDP port.
 6. **Multi-device** (new) — `--device` ref forms, `$QUEST_DEVICE`, resolution order, and `device set/list/rm/info`.
 7. **Per-command sections** — deploy, open, screenshot, battery,
-   stay-awake (corrected: `--pin`, `--idle-timeout`, `--low-battery`, `--unplugged-timeout`, `--off`, `--status`; daemon-delegated; XDG PID path),
+   stay-awake (corrected: PIN via `--pin` **or** saved config — config preferred; `--idle-timeout`, `--low-battery`, `--unplugged-timeout`, `--off`, `--status`; daemon-delegated; XDG PID path),
    logcat (start/stop/status daemon-delegated + `tail` as `tail(1)` pass-through; XDG log path + `latest.txt`),
    casting (setup-cast / cast-screenshot / dashboard).
 8. **XDG paths reference** (new) — runtime/state/config/data locations from `paths.ts`.
