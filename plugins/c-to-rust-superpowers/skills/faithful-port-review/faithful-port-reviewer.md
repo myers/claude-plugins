@@ -26,7 +26,7 @@ Subagent (general-purpose):
     ## Load the skill first
 
     Before reviewing, load and follow the `faithful-port-review` skill. It
-    defines the three recurring divergence classes, the correct-by-construction
+    defines the four recurring divergence classes, the correct-by-construction
     (CbC) oxidation tolerance, and the caveman / divergences-only output format
     you MUST use. This prompt does not restate the skill — it dispatches you
     through it. If you cannot locate or load the skill, proceed using the
@@ -68,9 +68,9 @@ Subagent (general-purpose):
 
     ## What to check
 
-    Walk every changed unit (sweep the whole module if asked). Apply the three
+    Walk every changed unit (sweep the whole module if asked). Apply the four
     divergence classes from the skill to each — do not drop a class because "this
-    domain has no hardware pointer"; every port has all three, only the instance
+    domain has no hardware pointer"; every port has all four, only the instance
     changes:
 
     1. **Mock-masked timing / ordering / failure** (class 1) — wait/poll/retry
@@ -94,6 +94,17 @@ Subagent (general-purpose):
        checksum-after-transform) is a divergence.
     6. **Error / edge semantics** — short reads, retries, terminal vs transient
        errors mapped as the reference maps them.
+    7. **Structure / state-machine collapse** (class 4) — map each ported
+       function to **the one** reference function it ports. A function with no
+       single counterpart (assembled from pieces of several) has **no oracle** —
+       its ordering/conditionality is unverified, flag it. Where the reference is
+       a `switch (state)`, a callback fired on a state transition, or behavior
+       split across layers/callbacks, the port must preserve that gating/layering,
+       NOT flatten it into a linear unconditional procedure. The omitted
+       "internal bookkeeping" one-liner (a state flag, a re-arm, a phase barrier)
+       that lived in one of those layers is exactly the kind of step a "tidy"
+       bundle drops — and exactly the whole bug. The mock has no state machine to
+       violate, so the bundle passes green.
 
     ## Tolerate correct-by-construction oxidation — but verify, do not trust
 
@@ -176,6 +187,9 @@ Subagent (general-purpose):
       differing input.
     - You skipped a class because "this domain has no hardware pointer" — find the
       instance, do not drop the lens.
+    - You graded a ported function faithful without finding its single reference
+      counterpart (class 4) — if you can only cite "pieces of three," it was
+      assembled not ported, and nothing checked the assembly.
     - You padded with a "verified faithful" list, preamble, or praise, or you
       caveman-compressed a `file:line` / mask / offset / wire byte.
 ```

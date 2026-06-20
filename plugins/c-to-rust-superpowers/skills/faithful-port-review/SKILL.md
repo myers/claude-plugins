@@ -44,30 +44,41 @@ and consistently. So:
 - Ask "does this match the **real reference / counterpart**?" not "does this match
   the cited line / pass the mock?"
 
-## The three recurring bug classes (grounded in real production failures)
+## The four recurring bug classes (grounded in real production failures)
 
 Each class is its **generic principle** — the lens is the same whether the real
 counterpart is a device, a disk, a peer, the kernel, or a concurrent producer. The
 per-domain instances below are *hooks, not limits*: recognize the **shape**, then
 find your domain's version. Do not dismiss a lens because your port has no
-hardware — *every* port has all three.
+hardware — *every* port has all four.
 
 | Class | Generic principle (and why green tests miss it) | The catch |
 |---|---|---|
 | **1. Mock-masked timing / ordering / failure** | The mock collapses the counterpart's real *temporal and failure behavior* — it resolves synchronously, in submission order, always succeeding. A wait/poll/retry loop, an ordering assumption, or an error path that is correct against the mock breaks when the real side is slow, reorders, fails transiently, or returns partial. | Every wait / order / error path: still correct if the result arrived *later*, *out of order*, *failed once*, or came back *short*? Compare the budget + retry to the reference's. |
 | **2. Wrong reference variant / dispatch** | The port is byte-faithful to implementation `X` and cites `X`, but the path THIS object / config / platform actually takes binds `Y`. Tests assert against `X`; nothing checks that `X` is the one that runs. | Trace the real dispatch — ops vtable, type-tagged switch, feature-flag gate, endianness / version variant — to the function THIS case binds. Verify against `Y`, not the cited `X`. |
 | **3. Referent identity / lifetime** | Something stores a *reference* to a structure — a pointer, offset, index, id, or a **checksum / hash computed over the bytes** — valid only while the referent stays put and byte-identical. A realloc, rebuild, re-encode, or in-place mutation *after* the reference was captured silently breaks it. | Every captured reference: confirm its referent is the *same, unmodified* bytes / allocation for the reference's whole life — not moved, not re-encoded, not re-checksummed out of step. |
+| **4. Structure / state-machine collapse** | The reference produces its behavior through a **structure** — a state machine, a layered call graph, conditional dispatch across callbacks/layers — where the **control flow and the state-conditions ARE the behavior**. The port flattens it into one linear, unconditional procedure that runs every step in fixed order. The mock has no state machine to violate and completes every step successfully, so the bundle passes green while silicon/prod sees steps run in the wrong order, run unconditionally where the reference gates them, or omitted because they lived in a layer the port didn't reproduce. | Map each ported function to **the** reference function it ports. If it maps to *none* (assembled from pieces of N reference functions), it **has no oracle** — its ordering/conditionality is unverified. If the reference is a `switch (state)` / a callback fired on a state transition / split across layers, the port must preserve that gating, not run it straight-line. |
 
-**The same three lenses, instantiated per domain** (find your column; the shape is identical):
+**The same four lenses, instantiated per domain** (find your column; the shape is identical):
 
 | | Device driver | Storage / filesystem (e.g. ZFS / Zarn) | Protocol / codec |
 |---|---|---|---|
 | **1** | poll bails on first empty event; HW posts ms later → timeout | I/O completes out of order; checksum-fail → read-the-other-copy repair path; short read; txg ordering | peer NAKs / retransmits / reorders; decoder fed a chunk split mid-token |
 | **2** | device ops-vtable binds `mt792xu_rr`, not generic `mt76u_rr` | checksum / compress / encrypt fn chosen by dataset props; **byteswap variant chosen by on-disk endianness** (a native-endian hardcode is faithful to the *wrong* variant) | wrong message-version handler; wrong cipher mode for the negotiated suite |
 | **3** | DMA ring base programmed into a register, then reallocated / moved | **block-pointer checksum captured, then the block re-encoded / compressed before write**; a dnode held by object-id across an eviction / realloc | length or CRC computed over a frame that is edited afterward |
+| **4** | `reset_device` bundles port-reset + Reset-Device + re-address + descriptor-reread + SET_CONFIG **linearly**; reference splits it across the hub driver + a `usb_set_device_state`-driven callback (Reset Device only on the `POWERED` transition, `if state != DEFAULT`) + `xhci_set_address` (a `switch (hdev->state)`) + the USB core. The dropped `trb_halted=1; trb_running=0` EP0 re-arm (lived in `xhci_set_address`) → every EP0 control SETUP `XACT_ERR` after reset | a txg / transaction / multi-phase-commit state machine flattened; a step the reference runs **only** in a specific txg state run every pass (or a quiesce/sync barrier between phases dropped because the linear version "doesn't need it") | a connection state machine (LISTEN→SYN-RCVD→ESTABLISHED→CLOSING) collapsed; a segment handled identically regardless of negotiated state, or a handshake step skipped because the happy path reached the next state anyway |
 
 These share a root: **the divergence is invisible to a mock and has no confession
 in the code.** Do not wait for a comment to warn you.
+
+**Class 4 is the structural sibling of class 1.** Class 1 is the reference's
+*temporal* shape (when results arrive); class 4 is its *control-flow* shape (which
+steps run, in what order, under what state). Both are erased by a mock that just
+"does each call and succeeds." The tell for class 4: a ported function with no
+single reference counterpart — you cannot cite one `ref.c:fn` for it, only "pieces
+of three." That function was *assembled*, not *ported*, and nothing checked the
+assembly. Port per-reference-function and let the **same call structure** compose
+them, so every piece keeps an oracle.
 
 ## Checklist
 
@@ -83,6 +94,7 @@ divergences" must never decay into "skim for obvious bugs."
 4. **Constants & serialized bytes** — request codes, masks, offsets, endianness, on-disk/wire field layouts pinned to *literal* reference values (a test asserting against the port's own named constant is circular).
 5. **Dropped/added/reordered steps** — a "tidy helper" that drops or reorders a reference step (a barrier, a re-read, a second write, a checksum-after-transform) is a divergence.
 6. **Error/edge semantics** — short reads, retries, terminal vs transient errors mapped as the reference maps them.
+7. **Structure / state-machine fidelity (class 4)** — does each ported function map to *one* reference function? A function assembled from pieces of several (no single counterpart) has no oracle. Where the reference is a `switch (state)`, a callback fired on a state transition, or behavior split across layers, the port must preserve that gating/layering — not run the steps straight-line and unconditional.
 
 ## Tolerating correct-by-construction oxidation
 
@@ -254,7 +266,8 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 - You padded the report with a "verified faithful" list, preamble, or praise — output is divergences only, caveman voice, no filler.
 - You caveman-compressed a `file:line`, a mask, an offset, or a wire byte — compress the *prose*, keep every technical token byte-exact.
 - You **skipped class 3 because "there's no hardware pointer here"** — class 3 is *any captured reference* (a checksum/hash over bytes, an object-id, an offset, an index), in any domain. A filesystem/protocol port has class-3 bugs too.
-- You decided a lens "doesn't apply to this domain" — all three lenses apply to every port; only the *instance* changes. Find the instance, don't drop the lens.
+- You **graded a ported function faithful without finding its single reference counterpart** (class 4). If you cannot cite one `ref.c:fn` it ports — only "pieces of three" — it was *assembled*, not ported, and nothing checked the assembly's ordering/conditionality. A bundle that flattens a `switch (state)` / a state-transition callback / a layered flow into a linear procedure is a divergence even when every individual step looks right.
+- You decided a lens "doesn't apply to this domain" — all four lenses apply to every port; only the *instance* changes. Find the instance, don't drop the lens.
 
 ## Rationalization table
 
@@ -266,3 +279,5 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 | "This Rust doesn't look like the C, so it's unfaithful." | Faithful is about *counterpart-observable* behavior, not textual likeness. Check the bytes (on wire / on disk). |
 | "Class 3 is about hardware pointers — N/A here." | Class 3 is *any captured reference*: a checksum over bytes, an object-id, an offset. The referent mutating after capture is the bug — hardware or not. |
 | "Re-allocating the ring / re-checksumming after the transform is cleaner." | The reference (device pointer, *or the stored checksum*) was captured over the old bytes. Cleaner code, dangling reference. |
+| "I combined three reference functions into one clean routine." | A function with no single `ref.c:fn` counterpart has no oracle (class 4). The reference's layering / `switch (state)` / state-transition callback **is** the behavior — flattening it drops ordering and conditionality the mock can't catch. Port per-function; compose with the same structure. |
+| "It's just internal bookkeeping (`trb_halted=1`), safe to drop." | The one-liner you can't immediately explain is exactly what a "tidy" port drops and exactly the whole bug. Keep every reference step until a *written* reason clears it — a step you don't understand is a step you must keep, not delete. |

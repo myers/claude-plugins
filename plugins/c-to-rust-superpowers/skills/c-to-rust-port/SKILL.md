@@ -46,6 +46,43 @@ types as the team can maintain." Here: **adopt the upgrades that are local (they
 survive resync for free), and defer the structural ones unless that subsystem is
 frozen upstream.** Locality, not maximal safety, is the optimization target.
 
+## Governing principle: port the structure, not just the statements
+
+A faithful port is **per-reference-function**: each function you write ports *one*
+reference function, cites it (`// C: <ref>:<fn>`), and is checked against it. The
+moment you write a function with **no single reference counterpart** — one you
+assembled from pieces of three reference functions because it "reads cleaner as
+one routine" — you have built something with **no oracle**. Nothing checks its
+ordering or its conditionality, because there is no single reference to diff it
+against.
+
+This bites hardest when the reference's behavior comes from a **structure**, not a
+straight line: a state machine (`switch (state)`), a callback fired on a state
+*transition*, behavior split across layers (a hub driver + a bus callback + the
+core). **The control flow and the state-conditions ARE the behavior.** Flattening
+them into one linear, unconditional procedure is the same bug as dropping a
+barrier — you dropped the *ordering* and the *gating*. A mock can't catch it: the
+mock completes every step successfully regardless of state, so the flattened
+bundle passes every test and fails on the real counterpart (the canonical case: a
+device `reset_device` that bundles the reference's hub-driven port-reset +
+state-transition Reset-Device + `xhci_set_address`'s `switch (state)` EP0 re-arm
+into one straight-line routine — green mock, dead EP0 on silicon).
+
+Two rules fall out, and both are Phase-1 faithfulness, not oxidation:
+
+1. **Preserve the reference's structure.** If the reference gates a step on state,
+   gate it. If it fires a step from a callback on a transition, don't run it
+   unconditionally inline. If it splits work across layers, keep the seam. Port
+   each reference function; let the **same call structure** compose them.
+2. **The one-liner you can't explain is the one you must keep.** A `trb_halted = 1`
+   that looks like skippable internal bookkeeping is exactly what a "tidy" bundle
+   drops and exactly the whole bug. A reference step survives until a *written*
+   reason clears it — not until it looks unnecessary.
+
+(This is the impl-side twin of `faithful-port-review`'s **class 4 — Structure /
+state-machine collapse**. The reviewer catches the flattened bundle; this
+principle stops you writing it.)
+
 ## The workflow at a glance
 
 The full discipline — phasing, the lookup table, per-idiom mappings, the
@@ -54,7 +91,10 @@ diff-stability tags, and the reporting recipe — is in
 
 1. **Phase 1 — faithful + safe.** Sound (no UB; `unsafe` behind a checked
    boundary), behavior-preserving, and structurally close enough to the C to diff
-   side by side. Resist cleverness.
+   side by side. Resist cleverness. **One ported function ⇄ one reference
+   function** — keep the reference's structure (state gating, transition
+   callbacks, layer seams); a routine assembled from several reference functions
+   has no oracle (see *port the structure, not just the statements*).
 2. **Phase 1.5 — prove it.** Establish behavioral equivalence before touching
    idioms (differential/behavioral oracles, MIRI over `unsafe`, Loom over atomics
    — see the CbC skill's `verification-tools.md`).
