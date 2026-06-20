@@ -1,9 +1,0 @@
-{
-  "name": "tail-head-block",
-  "description": "Blocks piping Bash tool commands to '| tail' or '| head'. These pipes hide progress output from both the user's live shell pane and the model.",
-  "version": "1.0.1",
-  "author": {
-    "name": "Myers Carpenter",
-    "email": "myers@maski.org"
-  }
-}

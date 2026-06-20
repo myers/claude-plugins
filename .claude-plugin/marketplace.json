@@ -36,12 +36,6 @@
       "keywords": ["hooks", "bash", "find", "glob", "grep"]
     },
     {
-      "name": "tail-head-block",
-      "source": "./plugins/tail-head-block",
-      "description": "Blocks piping Bash tool commands to | tail or | head. Directs the agent to run in background and Read the output file, keeping large output out of the model context.",
-      "keywords": ["hooks", "bash", "tail", "head", "streaming", "background"]
-    },
-    {
       "name": "quest-dev",
       "source": "./plugins/quest-dev",
       "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
