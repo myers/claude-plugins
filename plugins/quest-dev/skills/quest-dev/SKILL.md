@@ -385,7 +385,20 @@ quest-dev screenshot ~/bugs -c "Crash before rendering"
 quest-dev logcat stop
 
 # Analyze logs
-grep -i "crash\|fatal" logs/logcat/*.txt
+grep -iE "fatal|crash|exception" "$(readlink -f ~/.local/state/quest-dev/logcat/<serial>/latest.txt)"
+```
+
+### Two Quests at once
+
+```bash
+quest-dev device set left  127.0.0.1:5555
+quest-dev device set right 127.0.0.1:5557
+
+QUEST_DEVICE=left  quest-dev stay-awake
+QUEST_DEVICE=right quest-dev stay-awake
+QUEST_DEVICE=left  quest-dev logcat start
+QUEST_DEVICE=right quest-dev open http://localhost:3000/
+# per-serial daemons/ports — the two sessions never collide
 ```
 
 ---
