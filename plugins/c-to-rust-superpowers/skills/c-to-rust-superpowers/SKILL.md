@@ -130,6 +130,23 @@ The mapping the reviewer needs is a **byproduct of porting**, not a separate art
 - The reviewer **never receives the porter's prose/rationale** — only the diff + the
   harvested mapping. That isolation is the point.
 
+**When the harvest finds no anchor (the `remediate` / pre-skill case), do NOT absorb it
+silently.** In a `new` port the implementer writes anchors as it goes, so the harvest is a
+clean grep. But in `remediate` — and any port written before the anchor convention — a unit
+often ties to its reference only by **prose** (a doc-comment / file-header "Mirrors FreeBSD
+`foo()` L251-269"), with no greppable `// C:` anchor. The controller still resolves the
+mapping (read the prose, open the reference, hand-build the `{C_REFERENCE_MAPPING}` line) so
+the gate can run — **but a hand-resolved anchor is a method gap, not a free pass.** Two
+required actions, never just the first:
+  1. **Emit it as `MISSING ANCHOR` in the sweep's `METHOD GAPS` block** ("anchor back-filled
+     by controller — was prose-only"), so the pre-skill port's anchor debt is *visible* and
+     does not read as "fully anchored." Silently hand-building the mapping is exactly how a
+     whole un-anchored file passes a remediate sweep with no finding.
+  2. **Back-fill the real `// C:` anchor into the code** as part of the remediate fix, so the
+     next harvest greps mechanically and the debt is actually paid down — not re-resolved
+     from prose every sweep. (`faithful-port-review`'s MISSING-ANCHOR method-gap, broadened
+     beyond `[D-heavy]` to cover exactly this harvest-mechanics harm.)
+
 ## Relationship to the other skills
 
 - **`c-to-rust-superpowers`** (this skill) = the **lifecycle / orchestration**: the three

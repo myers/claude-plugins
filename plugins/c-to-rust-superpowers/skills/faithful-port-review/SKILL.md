@@ -191,18 +191,35 @@ gaps**, and report them in a SEPARATE `METHOD GAPS` block, distinct from
   heavy oxidation is *earned* on a cold, frozen file, **not** on a hot one. The
   same `[D-heavy]` oxidation on a file with one commit ever is NOT a gap — judge
   it by the reference's churn, not by the oxidation alone.
-- **Missing anchor.** A ported `[D-heavy]` region with no
-  `// C: <fn>() <label>:` anchor comment tying it back to the reference. When the
-  upstream diff lands, a heavily re-architected region with no anchor gives the
-  resync **no landing point** — the next porter cannot find where the C function
-  went. `[D-heavy]` earns its keep only if it stays resync-navigable.
+- **Missing anchor.** A ported unit with no **harvestable** `// C: <fn>() <label>:`
+  anchor comment tying it back to the reference. Two harms, two scopes:
+  - **`[D-heavy]` region (resync landing point).** When the upstream diff lands, a
+    heavily re-architected region with no anchor gives the resync **no landing
+    point** — the next porter cannot find where the C function went. `[D-heavy]`
+    earns its keep only if it stays resync-navigable.
+  - **ANY ported unit (gate-harvest mechanics), even `[D-light]` 1:1 translations.**
+    The `★` reviewer gate's `{C_REFERENCE_MAPPING}` is **harvested by grepping the
+    `// C:` anchors out of the unit** (the anchor-harvest handoff, D3 of
+    `c-to-rust-superpowers`). A unit whose only reference tie is **prose** — a
+    doc-comment or file-header "Mirrors FreeBSD `foo()` L251-269", not a greppable
+    `// C:` anchor — does **not** harvest: the controller must hand-build the
+    mapping from prose, which both costs effort and **silently hides** that the unit
+    had no machine-checkable tie. **Prose-only citations count as a missing anchor**,
+    regardless of D-tag. This is the dominant case for a **pre-skill port** (one
+    written before the anchor convention): faithful, often `[D-light]`, prose
+    citations everywhere, harvestable anchors nowhere — and the `[D-heavy]`-only
+    reading lets the whole file slip. Flag it; back-filling `// C:` anchors is the
+    expected remediate fix.
 
 Verify each candidate gap the same adversarial way as a divergence: confirm the
 prove-test really is absent (not just renamed), confirm the reference really is
-hot (`git log` it — do not assume), confirm the region really is `[D-heavy]` and
-really has no anchor. A clean port — prove-tests present, no heavy oxidation on
-hot files, anchors on every `[D-heavy]` region — yields an empty `METHOD GAPS`
-block ("no method gap found"), exactly as a faithful module yields no divergence.
+hot (`git log` it — do not assume), and confirm the anchor really is absent —
+**a greppable `// C:` comment, not merely a prose mention in the doc-comment**
+(prose does not satisfy it; the harvest greps `// C:`). A clean port — prove-tests
+present, no heavy oxidation on hot files, a harvestable `// C:` anchor on every
+ported unit (always for `[D-heavy]`; for lighter units at least enough that the
+gate's mapping greps mechanically) — yields an empty `METHOD GAPS` block ("no
+method gap found"), exactly as a faithful module yields no divergence.
 
 ## Output format — caveman voice, divergences only
 
@@ -251,7 +268,7 @@ divergence review; never fold gaps into `DIVERGENCES`):
 METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 - MISSING PROVE-TEST. `unit` (ports `ref.c:fn`). no behavior-pin test. no oracle.
 - OVER-OXIDIZE HOT FILE. `file:line` [D-heavy] on `ref.c` (hot: N commit/month). resync cost.
-- MISSING ANCHOR. `file:line` [D-heavy] region. no `// C: fn() label:`. resync no landing.
+- MISSING ANCHOR. `file:line` ports `ref.c:fn`. no greppable `// C: fn() label:` (prose-only no count). gate-harvest no land. ([D-heavy] also = resync no landing.)
 
 (empty -> "no method gap found")
 ```
