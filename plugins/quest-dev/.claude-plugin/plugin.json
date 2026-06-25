@@ -1,7 +1,7 @@
 {
   "name": "quest-dev",
   "description": "Meta Quest development toolkit: a quest-dev skill plus hooks that block bypass-prone raw adb (adb logcat, adb install) and redirect to quest-dev (logcat, deploy), keep the Quest awake during sessions, and forcefully assert the skill must be loaded for Quest work.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
