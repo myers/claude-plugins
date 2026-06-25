@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PreToolUse hook: block raw adb commands that must go through the quest-dev CLI.
 #
 # One script, so only one process runs per Bash call. Two cases are blocked:

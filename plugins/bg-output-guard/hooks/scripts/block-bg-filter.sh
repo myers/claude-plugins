@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PreToolUse hook: block output-truncating filter pipes on BACKGROUND Bash commands.
 #
 # Rationale: when a Bash command runs with run_in_background=true, the harness already

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Claude Code PostToolUse hook - sends activity signal to quest-dev stay-awake
 # This script runs after every tool execution to keep Quest awake during active sessions
 

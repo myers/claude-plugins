@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Tests for the quest-dev PreToolUse guard (block-adb.sh) and the SessionStart
 # skill-load assertion (assert-quest-skill.sh).
 #

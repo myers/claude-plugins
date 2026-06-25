@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SessionStart hook: forcefully assert that any Meta Quest work goes through the
 # quest-dev skill. Modeled on superpowers' SessionStart injection -- fires once
 # per session by virtue of the event, so no marker file is needed.

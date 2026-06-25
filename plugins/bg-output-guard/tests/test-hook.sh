@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Tests for block-bg-filter.sh
 #
 # The hook has three outcomes:
