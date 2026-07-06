@@ -80,13 +80,35 @@ of three." That function was *assembled*, not *ported*, and nothing checked the
 assembly. Port per-reference-function and let the **same call structure** compose
 them, so every piece keeps an oracle.
 
+## Coverage direction: walk the C, not the Rust
+
+**Coverage is C-side-driven. Start from the C reference, not from the ported
+files.** Open the reference at its entry points (the worker/ISR/ioctl/public
+API the diff touches), walk its **call graph**, and for **every C function on
+the path** demand a named Rust counterpart — or a written-down deferral. Only
+then diff each pair. A review that walks the Rust files and verifies their
+`// C:` citations can only check what the port *wrote*; a function the port
+never wrote has no file, no citation, and no lines to diff — it is invisible
+to a Rust-driven walk, and a dropped callee is exactly a class-5 "dropped
+step" at whole-function granularity.
+
+Real scar (mt76-46): the C RX pipeline is `mt76u_process_rx_queue →
+mt76u_process_rx_entry → rx_skb`; the port collapsed it to `process → sink`,
+dropping the middle function (the `dma_len` trim, usb.c:455+528). A file-level
+sweep reviewed the port's rx ring against its cited C lines and passed it —
+the untrimmed buffer's zero pad then parsed as a hidden-SSID IE on silicon and
+blanked every scanned network's SSID. Walking the C call graph from
+`mt76u_rx_worker` finds the missing counterpart in one step.
+
 ## Checklist
 
-Walk the diff (or the whole module, in sweep mode) and **examine every item** — you
-re-derive each behavior from the reference independently. You **report only the
-divergences** (see Output format); you do *not* write down the ones you found
-faithful. Checking is mandatory; listing the faithful ones is not — "report only
-divergences" must never decay into "skim for obvious bugs."
+Walk the C reference's call graph as above, mapping each C function to its
+ported counterpart (the diff / module tells you which C entry points are in
+scope), and **examine every item** — you re-derive each behavior from the
+reference independently. You **report only the divergences** (see Output
+format); you do *not* write down the ones you found faithful. Checking is
+mandatory; listing the faithful ones is not — "report only divergences" must
+never decay into "skim for obvious bugs."
 
 1. **Wait/poll/retry loops** — timing, ordering, empty/partial-result and transient-failure handling vs the real counterpart (class 1).
 2. **Dispatch** — for every op, the concrete implementation THIS object/config/platform binds, not the generic/cited one (class 2).
@@ -275,6 +297,7 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 
 ## Red flags — you are doing it wrong if
 
+- Your **coverage list came from the Rust tree** (files, `// C:` citations) instead of the C call graph — you can only find bugs in code the port wrote; you will never find the function it *didn't* write (the mt76-46 dropped-trim class).
 - You verified against the function the **port cited** instead of opening the reference yourself.
 - You concluded "faithful" because **the tests are green** / the diff looks like the C.
 - You skipped a wait loop because it "obviously polls correctly" (it polls correctly *against the mock*).
@@ -290,6 +313,7 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 
 | Excuse | Reality |
 |---|---|
+| "I reviewed every ported file against its citations." | You checked what exists. The worst divergence is the C callee with NO Rust counterpart — only walking the C call graph finds it. |
 | "Tests are green, it's faithful." | Green = matches the mock. The mock shares the port's blind spots. |
 | "The comment says it matches `ref.c:81`." | The comment is the author's model. Open the reference and check which *variant* THIS case actually runs. |
 | "It's a faithful port, divergences would be obvious." | The expensive ones have no comment and pass every mock test. That's why they reach production. |
