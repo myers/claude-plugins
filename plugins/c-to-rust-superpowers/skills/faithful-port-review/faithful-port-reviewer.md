@@ -26,7 +26,7 @@ Subagent (general-purpose):
     ## Load the skill first
 
     Before reviewing, load and follow the `faithful-port-review` skill. It
-    defines the four recurring divergence classes, the correct-by-construction
+    defines the five recurring divergence classes, the correct-by-construction
     (CbC) oxidation tolerance, and the caveman / divergences-only output format
     you MUST use. This prompt does not restate the skill — it dispatches you
     through it. If you cannot locate or load the skill, proceed using the
@@ -68,9 +68,9 @@ Subagent (general-purpose):
 
     ## What to check
 
-    Walk every changed unit (sweep the whole module if asked). Apply the four
+    Walk every changed unit (sweep the whole module if asked). Apply the five
     divergence classes from the skill to each — do not drop a class because "this
-    domain has no hardware pointer"; every port has all four, only the instance
+    domain has no hardware pointer"; every port has all five, only the instance
     changes:
 
     1. **Mock-masked timing / ordering / failure** (class 1) — wait/poll/retry
@@ -86,15 +86,25 @@ Subagent (general-purpose):
        ids, and **checksums/hashes over bytes**: confirm the referent stays the
        same unmodified bytes/allocation for the reference's whole life (not
        moved, re-encoded, or re-checksummed out of step).
-    4. **Constants & serialized bytes** — request codes, masks, offsets,
+    4. **Persistent state ownership / key scope** (class 5) — before grading
+       functions, inventory retained state in the changed/swept modules:
+       `BTreeMap`/`HashMap`, `Vec`/arrays, bool flags, rings, DMA pages,
+       completion tables, cached contexts, and live object handles. For each,
+       map `Rust field -> C field -> C owner/key -> Rust owner/key`. C keys
+       include shapes like `global`, `slot`, `(slot, endpoint)`, `(hub, port)`,
+       `transfer`, `command`, `object_id`, `(peer, stream_id)`. Rust key must
+       be at least as specific as C. Name the smallest two-object alias scenario
+       that would fail if the key is too narrow. Report only real divergences,
+       but do the inventory.
+    5. **Constants & serialized bytes** — request codes, masks, offsets,
        endianness, on-disk/wire field layouts pinned to *literal* reference
        values (a test asserting the port's own named constant is circular).
-    5. **Dropped / added / reordered steps** — a "tidy helper" that drops or
+    6. **Dropped / added / reordered steps** — a "tidy helper" that drops or
        reorders a reference step (a barrier, a re-read, a second write, a
        checksum-after-transform) is a divergence.
-    6. **Error / edge semantics** — short reads, retries, terminal vs transient
+    7. **Error / edge semantics** — short reads, retries, terminal vs transient
        errors mapped as the reference maps them.
-    7. **Structure / state-machine collapse** (class 4) — map each ported
+    8. **Structure / state-machine collapse** (class 4) — map each ported
        function to **the one** reference function it ports. A function with no
        single counterpart (assembled from pieces of several) has **no oracle** —
        its ordering/conditionality is unverified, flag it. Where the reference is
@@ -136,6 +146,12 @@ Subagent (general-purpose):
     it actually does. If you cannot exhibit such an input, it is not behavioral —
     downgrade it to MAYBE-CbC and frame it as a question, not a CRITICAL. Do not
     report a divergence you have not adversarially confirmed.
+
+    For identity-scope findings, the concrete input is usually a two-object
+    scenario. Name it explicitly: e.g. two live slots with endpoint `0x81`; slot A
+    sets a halt bit then slot B submits control; parent hub disconnects while child
+    slot remains registered; deferred/unclaimed live device is unplugged before a
+    driver binds. A single-object mock never proves these safe.
 
     ## Read-only review
 
@@ -187,6 +203,11 @@ Subagent (general-purpose):
       differing input.
     - You skipped a class because "this domain has no hardware pointer" — find the
       instance, do not drop the lens.
+    - You skipped persistent state because every function looked faithful. A state
+      table keyed narrower than the C owner/key is a behavioral divergence even
+      when each helper's local steps match.
+    - You accepted a single-device / single-object test as proof that a retained
+      state key is correct.
     - You graded a ported function faithful without finding its single reference
       counterpart (class 4) — if you can only cite "pieces of three," it was
       assembled not ported, and nothing checked the assembly.

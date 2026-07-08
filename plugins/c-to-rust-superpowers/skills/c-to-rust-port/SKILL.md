@@ -83,6 +83,28 @@ Two rules fall out, and both are Phase-1 faithfulness, not oxidation:
 state-machine collapse**. The reviewer catches the flattened bundle; this
 principle stops you writing it.)
 
+## Governing principle: port the ownership graph, not just the data
+
+Faithfulness also applies to **where state lives and what keys it**. A C driver or
+protocol often stores state under a composite owner (`devs[slot].endp[epno]`,
+`hub->ports[n]`, `(peer, stream_id)`, `object_id + generation`). A Rust port that
+uses a global flag or a map keyed only by the visible sub-id can be locally
+faithful in every helper and still alias two live objects on the real counterpart.
+Single-object mocks never catch this.
+
+For every persistent Rust state field (`BTreeMap`, `HashMap`, `Vec`, array, bool
+flag, ring, DMA page, completion table, cached context, live object handle), record
+the C owner/key it ports and keep the Rust key at least as specific:
+
+- `// C state: sc->sc_hw.devs[slot].endp[epno] -> endpoints[(slot, ep_addr)]`
+- `// C state: pepext->trb_halted -> ep_halted[(slot, dci)]`
+- `// C state: hub child on (hub_slot, port) -> downstream_slot[(hub_slot, port)]`
+
+If a deliberate collapse is safe, write the invariant that makes the missing key
+impossible (for example "only one live device" with the enforcement site). Without
+that written invariant, prefer the C ownership scope. This is Phase-1 faithfulness,
+not an idiomatic-Rust upgrade.
+
 ## The workflow at a glance
 
 The full discipline — phasing, the lookup table, per-idiom mappings, the
@@ -94,7 +116,10 @@ diff-stability tags, and the reporting recipe — is in
    side by side. Resist cleverness. **One ported function ⇄ one reference
    function** — keep the reference's structure (state gating, transition
    callbacks, layer seams); a routine assembled from several reference functions
-   has no oracle (see *port the structure, not just the statements*).
+   has no oracle (see *port the structure, not just the statements*). Keep the
+   reference's persistent-state ownership/key scope too; do not collapse per-slot,
+   per-endpoint, per-object, or per-peer state into a global map/flag without a
+   written invariant proving the missing key cannot vary.
 2. **Phase 1.5 — prove it.** Establish behavioral equivalence before touching
    idioms (differential/behavioral oracles, MIRI over `unsafe`, Loom over atomics
    — see the CbC skill's `verification-tools.md`).
