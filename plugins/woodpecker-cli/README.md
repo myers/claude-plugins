@@ -10,8 +10,6 @@ by name or when a task touches Woodpecker.
 
 ## The `ci-watch` hook
 
-**Status: designed, not yet implemented.**
-
 A guard nobody runs is not a guard — and a guard nobody *reads* is not a guard
 either. A red pipeline can sit on `main` for weeks while running faithfully on
 every push. This hook closes that gap: when the agent finishes a turn, it checks
@@ -72,6 +70,7 @@ Set `CI_WATCH=0` to disable it for a session.
 
 ### Testing
 
+`tests/test-ci-watch.py` — plain asserts, no pytest, run it directly.
 The decision is a pure function of `(wp output, state, now) -> (nudge?, state)`,
 so it tests without a network. The bar: **every brake and every fail-silent path
 has a test that goes red when that guard is removed.**

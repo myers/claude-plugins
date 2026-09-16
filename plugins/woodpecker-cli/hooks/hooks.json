@@ -1,0 +1,16 @@
+{
+  "description": "Tells the agent when Woodpecker CI has gone red on the checked-out branch, at most once per 10 minutes per repo",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/ci-watch.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
