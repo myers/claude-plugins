@@ -9,73 +9,161 @@
       "name": "bg-output-guard",
       "source": "./plugins/bg-output-guard",
       "description": "Blocks output-truncating filter pipes (| tail, | grep, | head, etc.), stderr suppression (2>/dev/null), and nohup on background Bash commands, and warns on other pipes/redirects, so the harness UI keeps the full log and keeps control of the process. Includes a skill explaining background command output.",
-      "keywords": ["hooks", "bash", "background", "tail", "grep", "output", "nohup"]
+      "keywords": [
+        "hooks",
+        "bash",
+        "background",
+        "tail",
+        "grep",
+        "output",
+        "nohup"
+      ]
     },
     {
       "name": "rust-correctness-by-construction",
       "source": "./plugins/rust-correctness-by-construction",
       "description": "Write Rust where illegal states and concurrency bugs are unrepresentable",
-      "keywords": ["debugging", "rust"]
+      "keywords": [
+        "debugging",
+        "rust"
+      ]
     },
     {
       "name": "c-to-rust-superpowers",
       "source": "./plugins/c-to-rust-superpowers",
       "description": "Orchestrate a C-to-Rust port across the superpowers ladder: new ports, remediating an existing port to standard, or resyncing after upstream C changes. Bundles the translation method (faithful then prove then idiomatic) and a fresh-context faithful-port review gate that re-derives the reference independently. Use when planning, porting, sweeping, resyncing, or reviewing a C-to-Rust port.",
-      "keywords": ["rust", "c", "porting", "c-to-rust", "ffi", "translation", "code-review", "faithful-port", "drivers", "silicon"]
+      "keywords": [
+        "rust",
+        "c",
+        "porting",
+        "c-to-rust",
+        "ffi",
+        "translation",
+        "code-review",
+        "faithful-port",
+        "drivers",
+        "silicon"
+      ]
     },
     {
       "name": "cdp-cli",
       "source": "./plugins/cdp-cli",
       "description": "Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP.",
-      "keywords": ["cdp", "chrome", "devtools", "debugging", "browser"]
+      "keywords": [
+        "cdp",
+        "chrome",
+        "devtools",
+        "debugging",
+        "browser"
+      ]
     },
     {
       "name": "find-block",
       "source": "./plugins/find-block",
       "description": "Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead.",
-      "keywords": ["hooks", "bash", "find", "glob", "grep"]
+      "keywords": [
+        "hooks",
+        "bash",
+        "find",
+        "glob",
+        "grep"
+      ]
     },
     {
       "name": "quest-dev",
       "source": "./plugins/quest-dev",
       "description": "Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions.",
-      "keywords": ["quest", "vr", "stay-awake", "hooks"]
+      "keywords": [
+        "quest",
+        "vr",
+        "stay-awake",
+        "hooks"
+      ]
     },
     {
       "name": "dev-plan",
       "source": "./plugins/dev-plan",
       "description": "Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans.",
-      "keywords": ["planning", "commands", "interview", "opus"]
+      "keywords": [
+        "planning",
+        "commands",
+        "interview",
+        "opus"
+      ]
     },
     {
       "name": "fj",
       "source": "./plugins/fj",
       "description": "Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories.",
-      "keywords": ["forgejo", "gitea", "issues", "pr", "kanban", "cli"]
+      "keywords": [
+        "forgejo",
+        "gitea",
+        "issues",
+        "pr",
+        "kanban",
+        "cli"
+      ]
     },
     {
       "name": "code-patterns",
       "source": "./plugins/code-patterns",
       "description": "Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions.",
-      "keywords": ["django", "python", "patterns", "conventions", "code-review"]
+      "keywords": [
+        "django",
+        "python",
+        "patterns",
+        "conventions",
+        "code-review"
+      ]
     },
     {
       "name": "woodpecker-cli",
       "source": "./plugins/woodpecker-cli",
       "description": "Woodpecker CI CLI for managing pipelines, repositories, secrets, and local pipeline execution.",
-      "keywords": ["woodpecker", "ci", "cd", "pipelines", "deploy", "cli"]
+      "keywords": [
+        "woodpecker",
+        "ci",
+        "cd",
+        "pipelines",
+        "deploy",
+        "cli"
+      ]
     },
     {
       "name": "goose-exec",
       "source": "./plugins/goose-exec",
       "description": "Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply.",
-      "keywords": ["goose", "deepseek", "execution", "orchestration", "planning", "cli"]
+      "keywords": [
+        "goose",
+        "deepseek",
+        "execution",
+        "orchestration",
+        "planning",
+        "cli"
+      ]
     },
     {
       "name": "myers-superpowers",
       "source": "./plugins/myers-superpowers",
       "description": "Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official.",
-      "keywords": ["skills", "tdd", "debugging", "collaboration", "askuserquestion"]
+      "keywords": [
+        "skills",
+        "tdd",
+        "debugging",
+        "collaboration",
+        "askuserquestion"
+      ]
+    },
+    {
+      "name": "fresh",
+      "source": "./plugins/fresh",
+      "description": "Mod adding /fresh <prompt>: clear the conversation, then submit the prompt or /command in place.",
+      "keywords": [
+        "mod",
+        "command",
+        "clear",
+        "session"
+      ]
     }
   ]
 }

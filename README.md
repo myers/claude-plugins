@@ -39,6 +39,7 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 | `dev-plan` | Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans. |
 | `find-block` | Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead. |
 | `fj` | Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories. |
+| `fresh` | Mod adding /fresh <prompt>: clear the conversation, then submit the prompt or /command in place. |
 | `goose-exec` | Delegate execution of an approved implementation plan to goose (a headless coding agent configured for a cheaper model such as DeepSeek) while Claude orchestrates and reviews. Use after planning to implement plan tasks cheaply. |
 | `myers-superpowers` | Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official. |
 | `quest-dev` | Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions. |

@@ -1,0 +1,9 @@
+{
+  "name": "fresh",
+  "description": "/fresh <prompt>: clear the conversation, then submit the prompt (or /command) in place.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Myers Carpenter",
+    "email": "myers@maski.org"
+  }
+}
