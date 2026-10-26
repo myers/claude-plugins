@@ -164,6 +164,17 @@
         "clear",
         "session"
       ]
+    },
+    {
+      "name": "gitea-actions",
+      "source": "./plugins/gitea-actions",
+      "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, read through gtx.",
+      "keywords": [
+        "hooks",
+        "ci",
+        "gitea",
+        "gtx"
+      ]
     }
   ]
 }
