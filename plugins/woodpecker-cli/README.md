@@ -40,6 +40,9 @@ diagnosis to the agent. It carries no opinion about what broke or how to fix it.
 
 - **Slug** from `git remote get-url origin`, scheme and `.git` stripped.
 - **Branch** from `git symbolic-ref --short HEAD`.
+- **Forge**: the origin's host must match the forge URL Woodpecker has the repo
+  registered against (`wp repo show`). A repo that moved forges keeps its slug,
+  and Woodpecker keeps its old red pipelines; this skips them.
 - **Which run**: the latest pipeline on that branch whose status is settled —
   anything but `pending`, `running`, `created`.
 
@@ -50,7 +53,7 @@ Nothing to configure, and nothing repo-specific in the plugin.
 A `Stop` hook that re-engages the agent needs hard limits, or a red pipeline
 re-nudges forever:
 
-- **Interval.** At most one `wp` call per repo per 10 minutes.
+- **Interval.** At most one poll (`wp repo show` + `wp pipeline ls`) per repo per 10 minutes.
 - **Dedupe.** Each pipeline number is nudged exactly once.
 - **Strikes.** Three consecutive nudges without a green, then silence until one.
 

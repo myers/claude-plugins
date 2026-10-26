@@ -133,6 +133,11 @@ check("slug: trailing slash", ci.slug_from_url("https://host/o/r/"), "o/r")
 check("slug: unparseable", ci.slug_from_url("not a url"), None)
 check("slug: empty", ci.slug_from_url(""), None)
 
+check("host: https", ci.host_from_url("https://gt.example/o/r.git"), "gt.example")
+check("host: ssh", ci.host_from_url("git@github.com:myers/cp.git"), "github.com")
+check("host: ssh url with port", ci.host_from_url("ssh://git@host:2222/o/r.git"), "host")
+check("host: empty", ci.host_from_url(""), None)
+
 # --- state file --------------------------------------------------------------
 
 with tempfile.TemporaryDirectory() as d:
@@ -148,12 +153,17 @@ with tempfile.TemporaryDirectory() as d:
 # --- the hook end to end -----------------------------------------------------
 
 
-def run_hook(payload, wp_stdout, cache, extra_env=None):
+REPO_FJ = ("o/r  main  https://fj.monoloco.net/o/r  private  yes  yes  yes\n")
+
+
+def run_hook(payload, wp_stdout, cache, extra_env=None, repo_stdout=REPO_FJ):
     """Invoke the hook as the harness does, with a fake `wp` on PATH."""
     bin_dir = Path(cache) / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
     wp = bin_dir / "wp"
-    wp.write_text("#!/bin/sh\ncat <<'WPEOF'\n" + wp_stdout + "WPEOF\n")
+    wp.write_text("#!/bin/sh\nif [ \"$2\" = repo ]; then cat <<'WPEOF'\n"
+                  + repo_stdout + "WPEOF\nexit 0\nfi\ncat <<'WPEOF'\n"
+                  + wp_stdout + "WPEOF\n")
     wp.chmod(0o755)
     env = dict(os.environ)
     env["PATH"] = f"{bin_dir}:{env['PATH']}"
@@ -197,6 +207,11 @@ with tempfile.TemporaryDirectory() as d:
     # opt out
     r4 = run_hook(payload, LS, Path(d) / "c3", {"CI_WATCH": "0"})
     check("e2e: CI_WATCH=0 disables", r4.stdout.strip(), "")
+
+    # a repo that moved forges: Woodpecker still holds its old registration
+    rm = run_hook(payload, LS, Path(d) / "c9",
+                  repo_stdout="o/r  main  https://gt.example/o/r  private  yes  no  yes\n")
+    check("e2e: forge host mismatch is silent", rm.stdout.strip(), "")
 
     # fail-silent: wp says something unparseable
     r5 = run_hook(payload, "total nonsense\n", Path(d) / "c4")

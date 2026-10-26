@@ -59,6 +59,16 @@ def slug_from_url(url):
     return "/".join(parts[-2:])
 
 
+def host_from_url(url):
+    """Hostname from any remote URL spelling, or None."""
+    if not url:
+        return None
+    url = re.sub(r"^[a-z+]+://", "", url.strip())
+    url = re.sub(r"^[^/@]+@", "", url)
+    host = re.split(r"[/:]", url, maxsplit=1)[0]
+    return host or None
+
+
 # --- state -------------------------------------------------------------------
 
 def state_path(slug):
@@ -118,6 +128,18 @@ def wp(*args):
     except (OSError, subprocess.SubprocessError):
         return None
     return r.stdout if r.returncode == 0 else None
+
+
+def forge_host(slug):
+    """Host of the forge Woodpecker has this repo registered against, or None.
+
+    The slug alone is not enough: a repo that moved forges keeps its
+    `owner/repo`, and Woodpecker keeps reporting its old, dead pipelines."""
+    out = wp("repo", "show", "--output-no-headers", slug)
+    for tok in (out or "").split():
+        if re.match(r"https?://", tok):
+            return host_from_url(tok)
+    return None
 
 
 def failing_steps(slug, number):
@@ -184,7 +206,8 @@ def main():
         return                                      # the harness's loop guard
 
     cwd = payload.get("cwd") or os.getcwd()
-    slug = slug_from_url(git(cwd, "remote", "get-url", "origin"))
+    origin = git(cwd, "remote", "get-url", "origin")
+    slug = slug_from_url(origin)
     branch = git(cwd, "symbolic-ref", "--short", "HEAD")
     if not slug or not branch:
         return
@@ -195,6 +218,9 @@ def main():
         return
 
     state["last_check"] = now
+    if forge_host(slug) != host_from_url(origin):
+        save_state(slug, state)
+        return                                      # not this forge's repo
     out = wp("pipeline", "ls", slug, "--limit", str(LIMIT))
     row = pick(parse_pipelines(out), branch)
     nudge, state = decide(row, state, slug, branch)
