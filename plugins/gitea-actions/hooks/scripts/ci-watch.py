@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Stop hook: tell the agent when Gitea Actions CI has gone red.
 
-The Gitea twin of woodpecker-cli's ci-watch.  At the end of a turn this checks,
-for each workflow, the latest finished run on the checked-out branch, and when
-any is red hands the agent the failure and the commands that show the logs.
+At the end of a turn this checks, for each workflow, the latest finished run on
+the checked-out branch, and when any is red hands the agent the failure and the
+commands that show the logs.
 
 The repo is the git remote whose host is gtx's Gitea instance
 (`gtx config get default.url`), not necessarily `origin`; a repo with no such

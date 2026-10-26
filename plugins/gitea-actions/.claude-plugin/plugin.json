@@ -1,7 +1,7 @@
 {
   "name": "gitea-actions",
   "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, read through gtx. Use with repos hosted on a Gitea instance gtx is logged in to.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
