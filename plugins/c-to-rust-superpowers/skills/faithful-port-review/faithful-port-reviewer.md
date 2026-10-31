@@ -116,6 +116,25 @@ Subagent (general-purpose):
        bundle drops — and exactly the whole bug. The mock has no state machine to
        violate, so the bundle passes green.
 
+    9. **Emit-wrapper completeness + sibling-path divergence** — when the
+       reference funnels a whole CLASS of operations through **one** wrapper
+       (every MCU command → `mt7921u_mcu_send_message` = `fill_message` →
+       `add_usb_sdio_hdr` → pad → `bulk_msg`; every block → `bio_submit`; every
+       record → `log_write`), the port must apply that wrapper's **full**
+       post-build sequence on **every** path that emits the class. Ports routinely
+       grow **two+ copies** of the emit path — a bring-up/download path and a
+       steady-state path, an init writer and a runtime writer — and only one is
+       kept complete. **Diff the port's sibling emit paths against each other AND
+       each against the one reference wrapper.** One copy that drops a
+       post-build step the other copy and the reference both have — a header
+       prepend, a tail pad, a checksum, a flush, an endian swap — is the bug. The
+       mock passes because the incomplete path still "sends something," and the
+       *working sibling in your own tree is the differential oracle that proves
+       the incomplete one wrong.* (Real case: the ops MCU-send omitted the 4-byte
+       USB SDIO header + pad the download-send applied; every steady-state command
+       was mis-framed and crashed the firmware, while the green mock — asserting
+       the pre-frame builder output — saw nothing.)
+
     ## Tolerate correct-by-construction oxidation — but verify, do not trust
 
     The faithful-first / oxidize-second method deliberately produces idiomatic
@@ -138,6 +157,18 @@ Subagent (general-purpose):
     Also **diff the tests**: a behavior-pinning assertion whose expected
     wire-bytes/written-value *changed* (not just adapted to a new type signature)
     is a confession that behavior changed — that is the bug, not a test update.
+
+    **Check the assertion BOUNDARY, not just the assertion.** A behavior test must
+    pin the exact bytes handed to the counterpart — the buffer at the `submit` /
+    `bulk_msg` / `write` / `send` call — NOT the output of an intermediate builder
+    (`fill_message`, `encode_record`, `serialize`). Any post-build step applied
+    AFTER that builder — a header prepend, a tail pad, a checksum, an endian swap —
+    is INVISIBLE to a test that snapshots the builder's return, and a mock that
+    records the builder's output certifies a frame the device never sees. When you
+    review a wire/disk assertion, trace WHERE the recorded bytes were captured: if
+    it is an inner builder rather than the last buffer before it leaves for the
+    device, the test has a blind spot exactly the size of the emit-wrapper's
+    post-processing — flag it, and check that wrapper (item 9) by hand.
 
     ## Adversarially verify before reporting
 
@@ -211,6 +242,12 @@ Subagent (general-purpose):
     - You graded a ported function faithful without finding its single reference
       counterpart (class 4) — if you can only cite "pieces of three," it was
       assembled not ported, and nothing checked the assembly.
+    - You reviewed a command/record BUILDER faithful without tracing the WRAPPER
+      that frames + emits it, and confirming EVERY sibling emit path in the port
+      applies the wrapper's full post-build sequence (item 9) — one incomplete
+      copy of a duplicated send/write path is the classic port bug the mock hides.
+    - You trusted a green wire/disk assertion without checking it snapshots the
+      bytes at the transport boundary, not an inner builder's return.
     - You padded with a "verified faithful" list, preamble, or praise, or you
       caveman-compressed a `file:line` / mask / offset / wire byte.
 ```

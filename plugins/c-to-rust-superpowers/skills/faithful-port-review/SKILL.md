@@ -19,6 +19,25 @@ model. They cannot catch a divergence that both the port and the mock share.
 **This review is the check the mock cannot be** — so it is worth running even when
 every test is green, and *especially* then.
 
+**Know which kind of mock you have — it bounds what green means.** A mock is
+either a **passive stub** or an **FSM of the counterpart**, and most are stubs. A
+passive stub records the calls, completes every operation *instantly and
+successfully*, and replays *hand-scripted* responses the test author pre-queued.
+It verifies only **"did the port emit the right sequence of calls"** — never
+**"would the real counterpart accept and act on them."** So it is blind to exactly
+the failures this review hunts: a fire-and-forget send it completes `ok` for free
+(class 1 — the counterpart never actually received it); a command issued in the
+wrong state it swallows without complaint (class 4); an out-of-order or malformed
+request it happily "succeeds." A **real** device-free oracle is an FSM model of the
+counterpart — its states, transitions, and preconditions **derived from the
+reference's assumptions and the captured transcripts** (the transcript *is* the
+observable contract) — that completes an operation only once it is genuinely
+delivered, emits results/events **only** on valid input from the right state, and
+**rejects** out-of-state or malformed input. Until such an oracle exists, treat a
+green stub-backed suite as "we called the sequence," not "the counterpart would
+accept it," and require a real-counterpart (silicon / disk / peer) check for any
+timing, delivery, or state-dependent change.
+
 This review supplements a normal code review (see superpowers
 `requesting-code-review`); it does not replace it. Run it as the review stage of
 a faithful-port task, before silicon/merge, and as a standalone **sweep** over an
@@ -54,7 +73,7 @@ hardware — *every* port has all five.
 
 | Class | Generic principle (and why green tests miss it) | The catch |
 |---|---|---|
-| **1. Mock-masked timing / ordering / failure** | The mock collapses the counterpart's real *temporal and failure behavior* — it resolves synchronously, in submission order, always succeeding. A wait/poll/retry loop, an ordering assumption, or an error path that is correct against the mock breaks when the real side is slow, reorders, fails transiently, or returns partial. | Every wait / order / error path: still correct if the result arrived *later*, *out of order*, *failed once*, or came back *short*? Compare the budget + retry to the reference's. |
+| **1. Mock-masked timing / ordering / failure** | The mock collapses the counterpart's real *temporal and failure behavior* — it resolves synchronously, in submission order, always succeeding. A wait/poll/retry loop, an ordering assumption, or an error path that is correct against the mock breaks when the real side is slow, reorders, fails transiently, or returns partial. **Sub-case with no visible loop — implicit synchrony / substrate-guarantee gap:** the reference's wait isn't a loop you can review; it's *baked into a synchronous/blocking API* (`usb_bulk_msg`, `wait_event`, a mutexed call, `dma_sync`) and provided *for free* by its platform (IRQ-driven completion, cache coherence, a memory barrier the arch emits, zeroed memory). A 1:1 map to an **async** port primitive (`submit`/non-blocking) *looks* faithful — one call → one call, nothing dropped — but silently converts synchronous → asynchronous, and your substrate (polled / IRQ-less ring, weak memory model, no coherence) does **not** restore the guarantee. | Every wait / order / error path: still correct if the result arrived *later*, *out of order*, *failed once*, or came back *short*? Compare the budget + retry to the reference's. **And: is any reference call blocking-by-API but rendered async in the port?** If so the port must re-materialize the wait (pump + wait-for-completion / barrier); the diff won't show it and the mock (instant completion) can't fail on it. |
 | **2. Wrong reference variant / dispatch** | The port is byte-faithful to implementation `X` and cites `X`, but the path THIS object / config / platform actually takes binds `Y`. Tests assert against `X`; nothing checks that `X` is the one that runs. | Trace the real dispatch — ops vtable, type-tagged switch, feature-flag gate, endianness / version variant — to the function THIS case binds. Verify against `Y`, not the cited `X`. |
 | **3. Referent identity / lifetime** | Something stores a *reference* to a structure — a pointer, offset, index, id, or a **checksum / hash computed over the bytes** — valid only while the referent stays put and byte-identical. A realloc, rebuild, re-encode, or in-place mutation *after* the reference was captured silently breaks it. | Every captured reference: confirm its referent is the *same, unmodified* bytes / allocation for the reference's whole life — not moved, not re-encoded, not re-checksummed out of step. |
 | **4. Structure / state-machine collapse** | The reference produces its behavior through a **structure** — a state machine, a layered call graph, conditional dispatch across callbacks/layers — where the **control flow and the state-conditions ARE the behavior**. The port flattens it into one linear, unconditional procedure that runs every step in fixed order. The mock has no state machine to violate and completes every step successfully, so the bundle passes green while silicon/prod sees steps run in the wrong order, run unconditionally where the reference gates them, or omitted because they lived in a layer the port didn't reproduce. | Map each ported function to **the** reference function it ports. If it maps to *none* (assembled from pieces of N reference functions), it **has no oracle** — its ordering/conditionality is unverified. If the reference is a `switch (state)` / a callback fired on a state transition / split across layers, the port must preserve that gating, not run it straight-line. |
