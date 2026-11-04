@@ -155,7 +155,7 @@
     {
       "name": "gitea-actions",
       "source": "./plugins/gitea-actions",
-      "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, read through gtx.",
+      "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, and on the default branch and landed PRs of repos in .ci-watch, read through gtx.",
       "keywords": [
         "hooks",
         "ci",
