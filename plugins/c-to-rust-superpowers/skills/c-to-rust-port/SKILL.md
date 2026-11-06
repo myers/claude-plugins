@@ -105,6 +105,21 @@ impossible (for example "only one live device" with the enforcement site). Witho
 that written invariant, prefer the C ownership scope. This is Phase-1 faithfulness,
 not an idiomatic-Rust upgrade.
 
+**Plan the graph core-first.** When a port unit is an ownership graph (records that
+hang off a buffer that hangs off an object that hangs off its parent, as in
+`dbuf_dirty_record_t` → `dmu_buf_impl_t` → `dnode_t`), the leaf pieces are
+self-contained and go green alone, and the coupled core is not. A plan that bundles
+the two gets the leaf pieces delivered round after round and the core reported as
+"remaining." So, when planning:
+- For each unit, list the C struct fields, locks and owner links it reads or
+  writes, and check that each one exists in the Rust base. A missing one is a
+  prerequisite unit, not something to discover mid-implementation.
+- Put the coupled core in the earliest unit it can go in. Its first RED test must
+  stay red until the core exists.
+- A self-contained helper either gets its own unit or rides with the unit that
+  consumes it.
+- Name units by their C structs and functions, not by project shorthand.
+
 ## The workflow at a glance
 
 The full discipline — phasing, the lookup table, per-idiom mappings, the
