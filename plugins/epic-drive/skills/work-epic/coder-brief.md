@@ -69,6 +69,6 @@ this task. Follow every rule below.
   proxy>, and where CI runs the full suite.
 - Worktree setup: <path pattern, base branch, untracked config to copy in>.
 - Toolchain: <pinned version and how to force it>.
-- CPU slices: <how lanes split cores; `taskset -c <slice>`>.
+- CPU slices: <how lanes split cores; `taskset -c <slice>`>. Pin only the test run; build unpinned first so compiles use every core.
 - Host isolation: <scratch dirs for test images, what tests may not touch>.
 - Commit trailers: <lines>.

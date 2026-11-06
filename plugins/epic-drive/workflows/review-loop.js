@@ -28,7 +28,7 @@ const list = (xs) => xs.map((x, i) => (i + 1) + '. ' + x).join(' ')
 const gateLines = (it) => (cfg(it).gates || []).map((g) => '- ' + g.split('{cpus}').join(cpus(it) || '<your slice>')).join('\n')
 const briefLine = (it) => {
   const d = cfg(it)
-  const slice = cpus(it) ? ` Run every taskset as "taskset -c ${cpus(it)}" (this lane's CPU slice).` : ''
+  const slice = cpus(it) ? ` Run every taskset as "taskset -c ${cpus(it)}" (this lane's CPU slice). Pin only test runs: build first unpinned (for cargo, \"cargo nextest run --no-run\" with the same args), then run the tests under the taskset.` : ''
   return (d.coderBrief ? `First read ${d.coderBrief} and follow it exactly, except as this prompt says.` : '') + slice
 }
 const planLine = (it) => (it.plan ? ' Plan: ' + it.plan + '.' : '')
