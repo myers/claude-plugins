@@ -18,7 +18,9 @@ controller's context spent on the ledger and never on ticket bodies.
   `/epic-drive:review-loop`): per lane item, optionally code the slice, check
   the diff covers the plan (sending a partial slice back to the coder, twice
   at most), then a fresh-context review, and fix plus re-review until APPROVE
-  or the round limit.
+  or the round limit. After a REJECT, items with `code` get the coverage check
+  again; plan items still missing go to a continuation coder before the fix
+  round.
 
 ## Install and update
 

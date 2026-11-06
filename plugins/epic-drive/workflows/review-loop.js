@@ -102,6 +102,19 @@ Write each missing item, tests first, and commit after each. The slice is not do
   let v = it.startFix ? { verdict: 'REJECT', head: it.startFix.head, blocking: it.startFix.blocking } : await review(it, 1, null)
   let round = 1
   while (v && v.verdict === 'REJECT' && round < maxRounds) {
+    // Missing slice work is a continuation, not a finding: a fix round skips it.
+    if (it.code) {
+      const cv = await cover(it, v.head, 'r' + round)
+      if (cv && !cv.complete) {
+        log(`${it.key}: review round ${round} left ${cv.missing.length} plan items unbuilt; continuation first`)
+        const c3 = await agent(`${pre(it)}${briefLine(it)}
+You are continuing an existing branch, not creating one: ${it.branch} in ${it.worktree}, head ${v.head}. The slice as dispatched: ${it.code}
+A plan-coverage check found these slice items still missing after review round ${round}: ${list(cv.missing)}
+Write each missing item, tests first, and commit after each. Do only this; the review's other findings come after. Return the new head and the items you added.`,
+          { label: `code:${it.key}:r${round}cont`, phase: 'Fix', schema: FIXED })
+        if (c3 && c3.head !== v.head) v = { ...v, head: c3.head }
+      }
+    }
     const f = await fix(it, v)
     if (!f) break
     if (f.head === v.head) { log(`${it.key}: fix round changed nothing (notfixed: ${f.notfixed.join('; ')})`); break }
