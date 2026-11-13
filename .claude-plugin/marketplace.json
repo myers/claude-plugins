@@ -162,6 +162,18 @@
         "gitea",
         "gtx"
       ]
+    },
+    {
+      "name": "work-epic",
+      "source": "./plugins/work-epic",
+      "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger.",
+      "keywords": [
+        "epic",
+        "subagents",
+        "git-issues",
+        "gitea",
+        "gtx"
+      ]
     }
   ]
 }

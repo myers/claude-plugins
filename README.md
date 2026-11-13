@@ -45,6 +45,7 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 | `myers-superpowers` | Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official. |
 | `quest-dev` | Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions. |
 | `rust-correctness-by-construction` | Write Rust where illegal states and concurrency bugs are unrepresentable |
+| `work-epic` | Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger. |
 
 <!-- END PLUGINS -->
 
