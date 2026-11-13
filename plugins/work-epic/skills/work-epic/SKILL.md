@@ -97,7 +97,7 @@ briefing.
 
 ```
 Work issue <id>. Tracker: <tracker>, run from <tracker root>; its CLAUDE.md says where the code lives.
-Load these skills first: subagent-working-a-git-issues-issue, plus every skill this repo's CLAUDE.md requires for work of this shape.
+Load these skills first: working-an-issue (covers both trackers), plus every skill this repo's CLAUDE.md requires for work of this shape.
 Read it yourself: the issue with its comments, then the epic <epic-ref> — the epic carries method and corrections from prior children.
 Gates before close: every gate this repo's CLAUDE.md and the epic body require for a change of this shape. Classify your own change against them. A gate that came back red goes in your report even if a re-run went green.
 Do not push. File any new gaps as tickets under <epic-ref>; touch no other issue. A gate that is red on the unmodified base is not "pre-existing" — it is a stop-the-line defect: file it at priority 0 under the subsystem epic it belongs to, never let it ride inside this commit, and do not close this ticket past a red final run.

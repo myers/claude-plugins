@@ -1,7 +1,7 @@
 {
   "name": "work-epic",
   "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
