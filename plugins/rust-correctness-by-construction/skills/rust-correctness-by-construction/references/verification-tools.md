@@ -52,6 +52,9 @@ test suite under MIRI to vet `unsafe` blocks.
 execute (and the non-deterministic choices it explores). It cannot prove your
 `unsafe` is sound in general — green MIRI means "no UB on these runs," not
 "correct." Still the single best routine check for any crate with `unsafe`.
+MIRI also cannot execute calls into C code: tests that cross an FFI boundary
+need valgrind memcheck, or ASan with both languages instrumented (nightly
+`-Zsanitizer=address`), instead.
 
 ## Kani — bounded model checking
 

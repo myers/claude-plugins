@@ -131,11 +131,66 @@ At **release**, also run the oracle and the size gate on the cross target
 
 ## Oracle
 
-<!-- Filled by the "Oracle and prove step for library planks" ticket: upstream
-test suite as prove-test (G6/F7/F15), units call through the C ABI until the
-library is all Rust (F26), memory-safety prove step (G12/F16). -->
+A library plank's counterpart is cheap to run: the pure-C reference build of
+the same library. Phase 1.5 (prove it) for a library plank is the rules below.
 
-TODO: not yet written.
+### The upstream test suite is the prove-test
+
+Link the library's own tests (unit binaries, cram or golden-output tests, the
+fuzz corpus) against the reference C `.so`, then against the mixed `.so`. Same
+inputs, same observable output. This is not circular: upstream wrote those
+tests against the C, so nothing in them comes from the port. The ported unit
+leaves the tests untouched; a test that must change is an oracle change and
+goes in the plan, not the diff.
+
+- **Expected output comes from the C build.** Where a test has no checked-in
+  expectation, the reference C build's output at the pinned SHA is the
+  expectation. The mixed build's output must diff empty against it.
+- **Fuzz corpus:** replay every corpus input through the fuzz target linked
+  against each build. Outcome (clean exit or abort) and any output must match.
+- **Projection harness** for goldens in a consumer's format. When the best
+  goldens are a consumer's wire format rather than calls into this library
+  (libubox: ubus-zero's frames are ubus messages, not blob calls), write a small
+  harness that drives them through the library's C API: parse, walk, rebuild,
+  print. Run it on the C build to make the reference output, then on the mixed
+  build; the diff must be empty. List every input the harness excludes, with
+  the reason (libubox: 2 of 1572 frames, deliberately malformed ACL goldens).
+- **Coverage check:** before porting a unit, confirm the suite reaches it. A
+  unit no upstream test calls gets a projection harness or a new differential
+  test, written and run against the C build first so its expectation comes
+  from the C.
+
+### Units call each other through the C ABI
+
+Until the whole library is Rust, a ported unit calls every other unit through
+its exported C symbol (`ffi::blob_put`), never through a Rust path
+(`crate::blob::put`), even when that unit is already Rust. Then any mix of C
+and Rust units links and runs, and each mix is an oracle configuration: with
+two units, the 2×2 (C/C, Rust-on-C, C-on-Rust, Rust/Rust). Run the oracle on
+every build CI makes (pure C, `none`, the full set); the per-unit knob builds
+the other mixes, which bisect a failure to one unit. Whether these seams
+collapse once the library is all Rust is a Phase 2 decision.
+
+### Memory-safety prove step
+
+MIRI cannot execute calls into C, and every oracle test above makes them, so
+MIRI covers the cargo unit tests only. Upstream's sanitizer builds
+(`-fsanitize=address` on the test binary) instrument the test binary, not the
+`.so`, and stable Rust has no ASan: inside the library they catch only what
+ASan's libc interceptors (`memcpy`, `free`) see.
+
+The memory-safety prove step is **valgrind memcheck over the oracle inputs
+against the plain mixed `.so`**: the test binaries, the projection harness,
+edge cases and the fuzz corpus replay, each under `valgrind --leak-check=full`.
+Run the same inputs on the C build first; its report is the baseline, since
+upstream tests may leak by design. Gate: per input, the mixed build adds no
+errors and no leaks beyond the baseline.
+
+Memcheck sees heap misuse: out-of-bounds heap access, use after free, double
+or mismatched free, reads of uninitialised memory, leaks. It misses overruns
+inside the stack and in globals, which stay unchecked unless CI also builds
+with nightly `-Zsanitizer=address` (Rust and C both instrumented). State that
+gap in the plan.
 
 ## UB and the exceptions ledger
 
