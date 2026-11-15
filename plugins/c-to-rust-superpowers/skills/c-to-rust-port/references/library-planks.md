@@ -106,7 +106,8 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 }
 ```
 
-- **Release profile:** `opt-level = "z"`, `lto = true`, `codegen-units = 1`.
+- **Release profile:** `opt-level = "z"`, `lto = true`, `codegen-units = 1`;
+  `overflow-checks` as in [UB and the exceptions ledger](#ub-and-the-exceptions-ledger).
   Stable is enough: with `no_std` and the abort handler above, nightly
   `-Zbuild-std`, `panic=immediate-abort` and `-Zlocation-detail=none` remove
   nothing more (measured).
@@ -194,9 +195,95 @@ gap in the plan.
 
 ## UB and the exceptions ledger
 
-<!-- Filled by the "UB-in-C policy and exceptions-ledger format" ticket: UB
-policy (G18/F21), ledger file and entry shape, ledger in the gate's diff
-(F25/F29), ledger scope (F30/F28), stack allocation (F27/G19), build-profile
-independent overflow (F23). -->
+### UB in the C
 
-TODO: not yet written.
+When the C has undefined behaviour, the port follows this ladder. Take the
+first step that fits:
+
+1. **UB that compilers define in practice** (signed overflow, shifts into the
+   sign bit, arithmetic on a NULL pointer): reproduce what the compiler
+   actually does with defined Rust operations: `wrapping_*`, or integer
+   address math (`wrapping_offset`). The result is the same and the UB is gone.
+   libubox: `id << 24` in `blob_init`, `wrapping_add` in `blobmsg_new`.
+2. **Out-of-bounds access where Rust has the bound** (a negative index into a
+   `static` table): let Rust's check trap. With `panic = "abort"` the process
+   aborts, where C reads adjacent memory. libubox: `blob_type_minlen[type]`
+   with a negative `type`.
+3. **Rust cannot know the bound** (a length the caller supplies for the
+   caller's own arrays): keep the C behaviour inside `unsafe`, using raw-pointer
+   reads and writes with the same sign extension. libubox:
+   `blobmsg_parse_array` with `policy_len <= 0`.
+
+**Never invent a guard.** A guard returns a value the C never defines, so it is
+a new API, not a port. A guard arrives only when upstream adds it, and a resync
+absorbs it (libubox: upstream 4811166 guards `blobmsg_parse`, so the Rust has
+that guard; `blobmsg_parse_array` has none, so the Rust has none).
+
+### Overflow must not depend on the build profile
+
+- Use `wrapping_*` wherever the C wraps: all unsigned arithmetic, and every
+  signed operation that step 1 reproduces.
+- Set `overflow-checks` to the same value in the dev and release profiles:
+  `true` by default, so an overflow the porter missed traps in every build, as
+  in step 2. If that fails the size gate, set `false` in both and record it in
+  the plan.
+
+The reason: with the cargo defaults, `+` on a C-derived integer panics in dev
+and wraps in release. The oracle builds release, so no test sees the
+difference.
+
+### Stack allocation (alloca, VLA)
+
+Rust has no `alloca` or VLA, and the `no_std` default has no heap.
+
+- **The C caps the size:** reserve a fixed worst-case array
+  (`MaybeUninit<[T; N]>`, left uninitialised like the alloca block). Results
+  match; the stack profile does not, because the frame is always the worst
+  case, even on early returns. It gets a ledger entry with class `stack`, and
+  its Risk names small thread stacks. libubox: `blobmsg_parse`, capped at 8 KiB.
+- **The C has no cap:** the function stays C (keep it as a C helper) until
+  Phase 2.
+
+### The exceptions ledger
+
+Each Rust crate has one ledger, `DIVERGENCES.md` at the crate root. Its header
+names the C files it covers and the pinned reference SHA. It records every
+deliberate difference between the Rust and the C, so a resync knows what to
+re-check.
+
+**What gets an entry:**
+
+- every UB case, at any ladder step, **including step 3**: UB kept identical
+  inside `unsafe` is still a fact a resync must re-check;
+- every `stack` divergence;
+- any other behaviour difference a review accepted.
+
+**What gets no entry:** an implementation-defined conversion that `as`
+reproduces exactly (`size_t → int → u16` truncation). Rust's `as` truncates
+the way gcc and clang do on every target Rust supports, so it is not a
+divergence. It needs an entry only when the Rust result differs from the C
+build's, or differs between supported targets.
+
+**Entry shape.** Ids are `D<n>`, assigned in order, never renumbered or reused;
+a removed divergence keeps its id, marked `Resolved` with the commit.
+
+```markdown
+## D4: `alloca` scratch array in `blobmsg_parse`
+- Class: stack            (ub-defined | ub-trap | ub-kept | stack | other)
+- Rust: `src/blobmsg.rs`, `blobmsg_parse` (`MaybeUninit<[u16; 4096]>` local).
+- C: `blobmsg.c:blobmsg_parse` (`pslen = alloca(policy_len * sizeof(*pslen))`).
+- C behaviour: what the C does, including what is undefined.
+- Rust behaviour: what the Rust does instead, and what it relies on
+  (`panic = "abort"`, overflow-checks).
+- Why: the ruling, and who made it.
+- Evidence: how the case is reached: from wire bytes, or only from a caller's
+  arguments or compile-time tables. Cite the C lines and the tests that cover it.
+- Risk: the cost if this entry is wrong. Required.
+```
+
+**The ledger goes in the gate's diff.** A unit's new or changed entries are
+part of the diff the faithful-port gate reviews. The gate re-derives each
+C-behaviour and Evidence claim from the C. A false claim is IMPORTANT, because
+tests cannot catch a wrong claim in prose (libubox: an entry claimed
+`blob_add` rejects negative payloads; it does not). A divergence with no entry
+is a finding at its own severity; for `stack` it is IMPORTANT.
