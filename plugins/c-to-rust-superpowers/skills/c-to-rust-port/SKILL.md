@@ -155,6 +155,10 @@ diff-stability tags, and the reporting recipe — is in
   diff-stability axis (`[D-light]/[D-mod]/[D-heavy]`), the diff-stability lists +
   churn-gating workflow, reading ownership intent out of C, what *not* to upgrade,
   and the divergence-reporting recipe.
+- `references/library-planks.md` — the extra rules when the target is a library
+  that C consumers link (a library plank): header contract, mixed `.so` build,
+  oracle, UB and the exceptions ledger. The `c-to-rust-superpowers` entry checks
+  decide when it applies.
 
 ## Execution & review
 

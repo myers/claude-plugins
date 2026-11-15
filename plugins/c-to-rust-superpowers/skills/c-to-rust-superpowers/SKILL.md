@@ -32,7 +32,7 @@ is only **how the work-list is born**:
 |---|---|---|
 | `new` | a plan/spec from `superpowers:writing-plans`, shaped by `c-to-rust-port` | `superpowers:finishing-a-development-branch` |
 | `remediate` | a `faithful-port-review` **sweep + method-gap pass** | re-sweep to confirm coverage/no-regression, then finishing |
-| `resync` | a **C-old↔C-new git diff** over the pinned reference | re-prove (differential oracle vs new C) + bump the pinned SHA, then finishing |
+| `resync` | a **C-old↔C-new git diff** over the pinned reference set | re-prove (differential oracle vs new C) + bump the pinned SHA, then finishing |
 
 `resync` and `remediate` share machinery and often co-occur — an upstream change
 frequently surfaces a latent port bug in the region it touches.
@@ -54,6 +54,36 @@ The reaching is done by Claude, driven by `using-superpowers` + sharp descriptio
 + the cross-references in this skill. superpowers cannot programmatically call our
 skills; this body is the reliability layer.
 
+## Entry checks (every mode)
+
+Before the entry builds its work-list, every mode settles two things.
+
+### The reference pin and the reference set
+
+The **reference pin** is the C commit the port is faithful to. Pin the commit the
+shipping product actually builds (for a distro package, the source version its
+package recipe fetches, e.g. OpenWrt's `PKG_SOURCE_VERSION`), not upstream HEAD.
+A port of HEAD matches a library nobody ships.
+
+Record the pin in `REFERENCE.md` at the root of the port, the one place every
+mode reads and `resync` bumps:
+
+- upstream repo URL and the pinned SHA;
+- where the SHA came from (the file and line that makes the product build it);
+- the **reference set**: the paths the port is faithful to.
+
+The reference set is wider than the `.c` files. It covers the `.h` headers (the
+API), the upstream tests (the oracle) and the build files (`CMakeLists.txt`,
+`Makefile`, linker version scripts: what is compiled and exported). A change to
+any of them can change what the port must do.
+
+### The library-plank check
+
+Ask: **is the target a library that C consumers link?** If yes, the port is a
+library plank: load the `c-to-rust-port` skill's `references/library-planks.md`
+and apply it alongside this spine. Each mode below marks where it bites. If no,
+skip it.
+
 ## The three modes in detail
 
 ### `new` — build → check
@@ -62,6 +92,7 @@ A C file, no Rust yet. Produce the Rust.
 
 ```
 c-to-rust-superpowers new
+  → entry checks (pin + reference set → REFERENCE.md; library-plank check)
   → brainstorming → writing-plans (shaped by c-to-rust-port; the plan records each unit's C reference)
   → per unit: subagent-driven-development (implementer → TDD; the behavior-pinning /
               differential test = c-to-rust-port "prove it", RED first) → ★ faithful-port-reviewer gate
@@ -69,15 +100,28 @@ c-to-rust-superpowers new
   → finishing-a-development-branch
 ```
 
+**Brainstorming shrinks when the decisions are already made.** If a spec or
+ticket already fixes the unit, the oracle and the compatibility rule (ABI,
+API-compatible, or wire-only), brainstorming has nothing left to explore there.
+Ask only the open build decisions (pipeline depth, build shape, how the Rust
+reaches header inlines, and the like) in one round, then go to writing-plans.
+The spec doc is the existing spec or ticket.
+
+For a library plank, the plan states which `library-planks.md` sections it
+applies (header contract, mixed `.so` build, oracle, UB and ledger).
+
 ### `remediate` — check → fix → re-check
 
 An existing Rust crate ported months ago. Bring it up to our porting standards.
 
 ```
 c-to-rust-superpowers remediate
+  → entry checks (REFERENCE.md present and pinned to what ships, else that is
+           finding #1; library-plank check)
   → SWEEP: faithful-port-review sweep across the whole port  +  a METHOD-GAP pass
            (faithfulness divergences AND missing prove-tests / over-oxidation on hot
-            files (diff-stability debt) / missing anchor comments)
+            files (diff-stability debt) / missing anchor comments; for a library
+            plank, also every library-planks.md rule the port breaks)
   → TRIAGE + ORACLE-SEQUENCE: bucket findings —
            fix-now (has a live oracle) / cheap-safe / latent-or-gated.
            ★ Do NOT fix what you can't validate — a speculative fix adds new mock-masked bugs.
@@ -91,11 +135,16 @@ Upstream C changed since the pinned SHA. Update the Rust port to match.
 
 ```
 c-to-rust-superpowers resync
-  → DIFF: git diff <pinned-old-SHA>..<new-SHA> over the reference C files = the work-list
+  → entry checks (old SHA from REFERENCE.md; new SHA = what the product now ships;
+           library-plank check)
+  → DIFF: git diff <pinned-old-SHA>..<new-SHA> over the whole reference set
+          (.c, .h, tests, build files) = the work-list
   → MAP each changed C hunk to its Rust via the diff-stable correspondence / anchor comments
   → CLASSIFY each: absorb-upstream-change | fix-revealed-port-bug | no-op-for-Rust
+           (.h hunk = API change; tests hunk = oracle change; build-file hunk =
+            compile-set or export change)
   → per actionable item: c-to-rust-port fix via subagent-driven-development → ★ faithful-port-reviewer gate
-  → RE-PROVE (differential oracle vs new C) + BUMP the pinned upstream SHA → finishing
+  → RE-PROVE (differential oracle vs new C) + BUMP the SHA in REFERENCE.md → finishing
 ```
 
 ## The review gate (D2)
@@ -113,6 +162,20 @@ gate**.
 - **Dispatched concurrently** with the code-quality reviewer — both read the same diff
   independently and run in parallel, so it costs the same wall-clock as a single review
   stage.
+- **Template by path, from the running version.** The controller hands the reviewer
+  subagent the absolute path of `faithful-port-reviewer.md` and of the
+  `faithful-port-review` SKILL.md (the template's `{SKILL_PATH}`), taken from the
+  plugin directory that passed the version check below, and tells it to read those
+  files. "Load the skill" alone lets a stale
+  session load an older cached version.
+- **Version check before the first dispatch.** The loaded skill's base directory
+  names its version (`.../c-to-rust-superpowers/<version>/skills/...`). Compare it
+  with the version `~/.claude/plugins/installed_plugins.json` lists for
+  `c-to-rust-superpowers`. If they differ, the session is running a stale copy
+  (`/clear` does not reload plugins): read every skill file, the template included,
+  from the installed `installPath` instead, and tell the user to restart Claude Code.
+  A harness with no `installed_plugins.json` skips the check and passes the paths
+  of the copy it loaded.
 - **Ported-units-only:** the gate runs **only on tasks whose diff touches ported units**
   (has C-reference anchors). Pure infra / test-harness / tooling tasks skip it.
 

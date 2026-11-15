@@ -25,7 +25,9 @@ Subagent (general-purpose):
 
     ## Load the skill first
 
-    Before reviewing, load and follow the `faithful-port-review` skill. It
+    Before reviewing, read and follow the `faithful-port-review` skill at
+    `{SKILL_PATH}` (read the file; do not load the skill by name, which can
+    pick up a stale cached version). It
     defines the five recurring divergence classes, the correct-by-construction
     (CbC) oxidation tolerance, and the caveman / divergences-only output format
     you MUST use. This prompt does not restate the skill — it dispatches you
@@ -253,6 +255,7 @@ Subagent (general-purpose):
 ```
 
 **Placeholders:**
+- `{SKILL_PATH}` — absolute path of `faithful-port-review/SKILL.md` in the plugin version the controller verified (see `c-to-rust-superpowers`, *The review gate*: template by path, version check).
 - `{BASE_SHA}` — starting commit of the port under review.
 - `{HEAD_SHA}` — ending commit.
 - `{DIFF}` — the `git diff {BASE_SHA}..{HEAD_SHA}` output (the changed port units). The controller pastes it inline so the subagent reviews exactly this range.
