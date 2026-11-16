@@ -20,11 +20,81 @@ replace it. The plan names which sections it used.
 
 ## Header contract
 
-<!-- Filled by the "Header contract section" ticket: header inlines and macros
-stay C (G1/F12), upstream headers ship verbatim (G2), bindgen
---wrap-static-fns + --allowlist-file (G8/F14). -->
+The library's public headers are the spec. Consumers compile them, inline
+bodies and macros included, so the Rust meets them; it never replaces them.
 
-TODO: not yet written.
+### Header code stays C
+
+`static inline` functions and macros in a public header compile into every
+consumer, not into the `.so`. Porting them changes nothing a consumer runs, so
+they are a **contract** on the Rust, not units: the Rust must leave bytes and
+struct state that the header code reads correctly (libubox: `blob_len()` reads
+`attr->id_len` straight from memory, so the Rust writes `id_len` exactly as
+the C does).
+
+- **The coverage walk skips them.** The work list holds the functions defined
+  in the library's `.c` files, including file-local `static` ones. A header
+  inline or macro with no Rust counterpart is the expected state, not a
+  dropped unit.
+- **The plan states the contract.** In its Interfaces block, the plan lists
+  the headers whose inline code stays C and says how the Rust reaches it
+  (below). The oracle checks the contract: upstream tests and consumers
+  compile the inlines from the real header and run them over the Rust's
+  output.
+
+### Upstream headers ship verbatim
+
+- **Install the upstream headers unchanged,** from the same pinned SHA as the
+  C. A resync takes them with the C; the reference set already lists them, and
+  a header change can change every unit that touches the type.
+- **The Rust gets its types from those headers through bindgen.** Use the
+  bindgen types in `extern "C"` signatures and for every struct a consumer
+  sees. Keep bindgen's layout tests on (drop `--no-layout-tests`): they are
+  compile-time asserts, free under `no_std`, so a header change that moves a
+  field fails the build. A Rust-side `#[repr(C)]` copy of a header type gets
+  its own `size_of`/`align_of`/`offset_of!` asserts against the bindgen type.
+- **Run bindgen for the C toolchain's target:** pass the same `--target`,
+  sysroot and `-I`/`-D` flags the C build uses after `--`. Otherwise the
+  layouts and asserts are the host's.
+- **cbindgen is at most a drift check:** generate a header from the Rust
+  exports and diff its prototypes against the upstream declarations. Its
+  output never ships, since it cannot emit inline bodies, function-like macros
+  or attributes such as `__packed`.
+
+### Calling header code from Rust
+
+When a ported unit calls a header inline (libubox: `blob_len`, the `list_*`
+helpers), call the C through bindgen's wrappers, so the header stays the one
+source of truth:
+
+```
+bindgen wrapper.h --use-core --wrap-static-fns --experimental \
+  --wrap-static-fns-path $OUT_DIR/extern \
+  --allowlist-file '.*/(blob|blobmsg)\.h' \
+  --allowlist-function 'malloc|realloc|free|strcmp' \
+  --allowlist-var 'EINVAL|ENOMEM' \
+  -o $OUT_DIR/bindings.rs -- <C toolchain target and flags>
+```
+
+- **`--wrap-static-fns`** emits `extern.c`, one exported `*__extern` wrapper
+  per inline. `build.rs` compiles it with the C compiler and flags and links it
+  as a bundled static library, so the wrappers land inside the staticlib. The
+  version script keeps them out of `.dynsym`. Measured on libubox: every
+  inline in `blob.h` and `blobmsg.h` wrapped, oracle green.
+- **`--allowlist-file`** scoped to the library's own headers. Unscoped,
+  bindgen binds all of libc (libubox: 4,174 → 531 lines). Add the libc
+  functions and constants the port calls by name with `--allowlist-function`
+  and `--allowlist-var`.
+- **`--use-core`** for the `no_std` default; without it the bindings name
+  `::std::` and fail to build.
+- **Use `core` for memory primitives:** `core::ptr::copy_nonoverlapping`,
+  `write_bytes` and slice compares, in place of binding `memcpy`, `memset`,
+  `memcmp` and `strlen`. Bindgen's declarations of those four trip rustc's
+  lint on redefining runtime symbols.
+- **Function-like macros cannot be wrapped.** Expand one in Rust by its exact
+  structure, with an anchor naming it (`// C: blob.h:blob_for_each_attr`),
+  and treat the expansion as a port the gate reviews. The catalog has the loop
+  rules. A header change to the macro is a resync item for every expansion.
 
 ## Mixed .so build
 
