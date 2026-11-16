@@ -16,7 +16,8 @@ target a library that C consumers link?* Every mode of `c-to-rust-superpowers`
 one host, or a Rust-only crate answers no; skip this file.
 
 When it applies, each section below adds to the normal method; it does not
-replace it. The plan names which sections it used.
+replace it. The plan names which sections it used. The review gate runs
+`faithful-port-review`'s **Library lens**, which checks these rules.
 
 ## Header contract
 

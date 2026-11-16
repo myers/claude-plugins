@@ -154,7 +154,7 @@ The faithful-port-reviewer runs as a **third review stage** per port task — it
 the verdicts are: SDD spec-compliance + SDD code-quality + the **faithful-port-reviewer
 gate**.
 
-- **Why third, not replace:** the faithful reviewer's power is having *only* `{DIFF}` +
+- **Why third, not replace:** the faithful reviewer's power is having *only* `{DIFF_FILE}` +
   `{C_REFERENCE_MAPPING}` and nothing else — that isolation is what forces independent
   re-derivation and is the structural implementation of "the review is the check the mock
   cannot be." Code-quality ("good Rust?") and faithful-port ("same bytes on the wire?") are
@@ -176,6 +176,11 @@ gate**.
   from the installed `installPath` instead, and tell the user to restart Claude Code.
   A harness with no `installed_plugins.json` skips the check and passes the paths
   of the copy it loaded.
+- **The diff travels as a diff-only file** (`{DIFF_FILE}`), not as SDD's review
+  package: that package's `git log --oneline` hands the reviewer the porter's commit
+  subjects. Fill `{WIRING}` with the unchanged files the unit relies on (shim, export
+  map, build lines) and `{LIBRARY_PLANK}` with `no`, or, on a library plank, the
+  stay-C headers and the unit's release-gate output.
 - **Ported-units-only:** the gate runs **only on tasks whose diff touches ported units**
   (has C-reference anchors). Pure infra / test-harness / tooling tasks skip it.
 
