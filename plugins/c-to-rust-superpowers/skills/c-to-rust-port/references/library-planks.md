@@ -93,8 +93,8 @@ bindgen wrapper.h --use-core --wrap-static-fns --experimental \
   lint on redefining runtime symbols.
 - **Function-like macros cannot be wrapped.** Expand one in Rust by its exact
   structure, with an anchor naming it (`// C: blob.h:blob_for_each_attr`),
-  and treat the expansion as a port the gate reviews. The catalog has the loop
-  rules. A header change to the macro is a resync item for every expansion.
+  and treat the expansion as a port the gate reviews. The catalog's §26 has the
+  loop rules. A header change to the macro is a resync item for every expansion.
 
 ## Mixed .so build
 
@@ -158,7 +158,7 @@ that ships a twin proves it.*
 - **`no_std`, core only, no `alloc` crate** by default:
   `#![cfg_attr(not(test), no_std)]`, so cargo unit tests keep std. libc comes
   in through FFI. bindgen needs `--use-core` (see Header contract). For
-  allocator identity, see the catalog's API-surface rows.
+  allocator identity, see the catalog's §23.
 - **std is allowed only when the build still passes every release gate.** On
   glibc, std adds `libgcc_s` to `DT_NEEDED` even with nightly
   `panic=immediate-abort`, so in practice the gates rule it out.

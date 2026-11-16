@@ -64,6 +64,15 @@ The per-pattern entries below are tagged on two axes:
 - **[D-heavy]** — restructures control flow / data model / call graph; every
   future upstream patch to that region must be hand-re-mapped.
 
+A third axis applies to **library planks** only (see `library-planks.md`):
+
+- **[API]** — the code touches a type or signature in a public header: an
+  exported function, a struct or field consumers see, an exported data symbol.
+  Take the **P1 column only**, use the bindgen type (or a `#[repr(C)]` copy
+  with its layout asserted against it), and keep the C signature. The header
+  is the contract, so no P2 upgrade applies there. Code no consumer can see
+  keeps the other two axes. See [The API-surface axis](#the-api-surface-axis-library-planks).
+
 ## Quick lookup table
 
 | You see in C | Phase 1 (faithful + safe) | Phase 2 (idiomatic) | Detail / see |
@@ -92,6 +101,16 @@ The per-pattern entries below are tagged on two axes:
 | Manual bounds check before index | keep check / `.get()` | branded index, newtype index | §20, type-system §1/§6 |
 | `char *` / `const char *` string | `*const c_char` + `CStr` at boundary | `&str`/`&CStr`/`String` | §21 |
 | Self-referential struct, no-move | raw ptrs, `unsafe`, document | `Pin` + `pin-init` | §22, concurrency §9 |
+| Memory the caller `free()`s | libc `malloc`/`realloc` via FFI | same | §23 |
+| `...` / `va_list` function | stays C, in a shim calling the Rust | same | §24 |
+| int/unsigned/`size_t` mixing | explicit `as` chain, C's conversions | same | §25 |
+| `for_each` macro loop with `continue` | `while` + labelled block, step after it | same | §26 |
+| Designated initialiser `[X] = Y` | zeroed array filled in a `const` block | same | §27 |
+| bindgen enum consts, packed / flexible-array fields | `as` at use; `addr_of!`, no references | same | §28 |
+| `alloca` / VLA | fixed worst-case array, or stays C | — | `library-planks.md` |
+
+Every row is also subject to the [API] axis when the plank is a library: see
+[The API-surface axis](#the-api-surface-axis-library-planks).
 
 ---
 
@@ -103,6 +122,12 @@ Phase 1. A nullable borrowed pointer becomes `Option<&T>`; a nullable owning raw
 pointer that must stay raw (FFI, intrusive) becomes `Option<NonNull<T>>`. The
 niche optimization makes `Option<&T>` and `Option<NonNull<T>>` the same size as
 the pointer, so it's free. NULL-as-error is better modeled as `Result` (§2).
+
+**Not at an exported boundary [API].** An `extern "C"` function in a public
+header keeps the raw `*const T`/`*mut T` the header declares, because C callers
+may pass anything a C pointer can hold. Convert to `Option<&T>` inside, at the
+point the C dereferences. `Option<extern "C" fn>` for a function-pointer field
+is fine: the ABI guarantees it, and bindgen emits it.
 
 ## 2. Error codes → Result [P1→P2]
 
@@ -232,6 +257,11 @@ capacity in the type and the length internally, never allocates, and makes
 overflow a checked operation; or just use slices throughout and let the length
 live in the slice. Eliminates manual length/overflow bugs.
 
+**Not at an exported boundary [API].** Keep the pointer and length parameters
+the header declares. Build a slice inside only where the C reads the whole
+range, and only after the C's own checks: `slice::from_raw_parts` is UB on a
+NULL pointer even for length 0, and C callers pass `(NULL, 0)` freely.
+
 ## 14. Buffer↔struct casts → zerocopy [P2]
 
 Parsing wire formats by casting `buf` to a `struct packet_hdr *`, or `union`
@@ -252,6 +282,23 @@ and easy to get wrong; prefer `OnceLock`/`OnceCell` for init-once globals, or a
 idiomatic move is often to *stop having the global* — thread the state through
 explicitly (the `Locked` context in `concurrency-lock-ordering.md` is an example
 of state-as-parameter), which also makes test isolation possible.
+
+**Exported data symbols [API]: neither move applies.** A global declared
+`extern` in a public header (libubox: `uloop.h` exports `uloop_cancelled`,
+`uloop_handle_sigchld`, `uloop_fd_set_cb`) is a symbol consumers read and write
+directly. `OnceLock`, `Mutex` or an atomic changes its type and layout, and
+threading the state through removes the symbol. Define it with the header's
+type and the C initial value:
+
+```rust
+// C: uloop.c:uloop_cancelled
+#[no_mangle]
+pub static mut uloop_cancelled: bool = false;
+```
+
+An `extern const` becomes `#[no_mangle] pub static`. Rust code reaches a
+`static mut` through `addr_of!`/`addr_of_mut!` in `unsafe`, never through a
+reference, and reads it on every access, as the C does.
 
 ## 16. container_of → offset_of! / intrusive-collections [P2]
 
@@ -306,6 +353,11 @@ text and `&CStr`/`CString` for NUL-terminated C-ABI strings. Doing the conversio
 *at the boundary* and using Rust string types inside is both faithful and
 idiomatic, so it's largely a Phase 1 move.
 
+**Not at an exported boundary [API].** Keep `*const c_char`. Call
+`CStr::from_ptr` only where the C itself scans for the NUL (`strlen`,
+`strcmp`), and never convert to `&str`: the UTF-8 check rejects bytes the C
+accepts, which changes behaviour.
+
 ## 22. Self-referential / no-move structs → Pin + pin-init [P2]
 
 C structs that embed list nodes, locks, or back-pointers and must not be moved
@@ -313,6 +365,164 @@ after registration. **P1:** raw pointers and `unsafe`, with the no-move invarian
 documented. **P2:** `Pin` plus `pin-init` for sound in-place initialization, so
 "initialized in place, never moved" becomes a type-level fact. See
 `concurrency-lock-ordering.md` §9 and the Rust-for-Linux `pin-init` exemplar.
+
+## 23. Memory consumers free → libc malloc [P1] [API] [D-light]
+
+When memory crosses the boundary in either direction, allocate it with libc's
+allocator through FFI: memory the library returns that consumers `free()`
+(libubox: `blob_memdup`), and buffers a consumer owns that the library
+`realloc`s or frees (`blob_buf.buf`). Call `malloc`, `realloc` and `free` from
+bindgen, exactly where the C does. Never use `Box`, `Vec`, `CString::into_raw`
+or a `#[global_allocator]`: a consumer's `free()` on Rust-allocated memory is
+heap corruption, even when the global allocator happens to be malloc today.
+The ownership cues in [Reading ownership intent](#reading-ownership-intent-out-of-c)
+("caller frees → return `Box<T>`") apply only to memory no C code frees.
+
+## 24. Variadic functions → stay C [P1] [API]
+
+Stable Rust can call a C-variadic function (`printf`, `snprintf`) but cannot
+define one (`c_variadic` is unstable), and `va_list` handling is unstable too.
+An exported `f(..., ...)` or `vf(..., va_list)` stays C: keep it in a small
+shim file (libubox: `blobmsg-variadic.c` holds `blobmsg_printf` and
+`blobmsg_vprintf`) that the mixed build compiles, calling the other units
+through their exported symbols. The shim is C the plan names, not a dropped
+unit; the oracle covers it like any C unit.
+
+## 25. Integer conversions → explicit `as` chains [P1] [D-light]
+
+C converts integers silently; Rust makes every conversion explicit, so each
+one is a place the port can diverge. This was the main fidelity risk in the
+libubox spike. Write out the conversion C performs, step by step:
+
+- **Types:** use `c_int`, `c_uint`, `c_long` from `core::ffi` (or bindgen's
+  types) where the C names `int`, `unsigned`, `long`; `usize` for `size_t`,
+  `isize` for `ptrdiff_t`/`ssize_t`. Never retype `int` as `i64` or `usize`.
+- **Usual arithmetic conversions:** `int` with `unsigned` → unsigned; `int`
+  with `size_t` → `size_t`, sign-extended (`x as isize as usize`; a negative
+  `int` becomes a huge `size_t`, as in C). A signed/unsigned comparison
+  converts the signed side the same way; never "fix" it by widening both to
+  `i64`, which changes the result for negatives.
+- **Integer promotion:** `u8`/`u16` operands promote to `int` before
+  arithmetic, so `a - b` on two `uint8_t` can be negative in C. Write
+  `(a as c_int) - (b as c_int)`.
+- **Truncation on assignment or return:** `int x = <size_t expr>`,
+  `uint16_t y = <int>` → `as c_int`, `as u16` at the point the C assigns.
+- **Arithmetic** follows `library-planks.md`'s overflow rule: `wrapping_*`
+  wherever the C wraps.
+- **Comment non-obvious chains** with the C types they follow
+  (`// size_t arithmetic, then truncated into int, as in C`).
+
+An `as` chain that reproduces the C exactly needs no ledger entry
+(`library-planks.md`, The exceptions ledger).
+
+## 26. Macro loops with `continue` → labelled blocks [P1] [D-light]
+
+A header `for_each` macro expands to a `for` loop whose step (advance the
+pointer, shrink the remaining length) runs on every iteration, including after
+`continue`. Expanded into `while cond { body; step }`, a Rust `continue` skips
+the step: an endless loop or a wrong walk. Put the body in a labelled block,
+turn each C `continue` into `break 'body`, and keep the step after the block:
+
+```rust
+// C: blob.h:__blob_for_each_attr
+while rem as usize >= ATTR && /* ... the macro's condition ... */ {
+    'body: {
+        if skip { break 'body; } // C: continue
+        if done { return 0; }    // C: break; return 0
+    }
+    rem = (rem as usize - ffi::blob_pad_len(attr)) as c_uint; // the macro's step
+    attr = ffi::blob_next(attr);
+}
+```
+
+Expand the macro with its own variables: if it shrinks the caller's `len`
+parameter in place, so does the Rust (libubox: the gate caught an expansion
+that shrank a copy, identical today, divergent on the next upstream change).
+The anchor names the macro, so a header change to it reaches every expansion.
+
+## 27. Designated initialisers → filled `const` arrays [P1] [D-light]
+
+`static const T t[N] = { [X] = a, [Y] = b };` zero-fills every unlisted entry.
+Build the same array in a `const` block, in the C's index order, with the C's
+length (the declared `N`, or the highest index plus one):
+
+```rust
+// C: blob.c:blob_type_minlen
+static BLOB_TYPE_MINLEN: [usize; ffi::BLOB_ATTR_LAST as usize] = {
+    let mut a = [0usize; ffi::BLOB_ATTR_LAST as usize];
+    a[ffi::BLOB_ATTR_STRING as usize] = 1;
+    a[ffi::BLOB_ATTR_INT8 as usize] = size_of::<u8>();
+    a
+};
+```
+
+A struct `{ .a = 1 }` becomes a struct literal with every other field zero:
+`..unsafe { core::mem::zeroed() }` (or bindgen's `Default`).
+
+## 28. bindgen quirks [P1] [D-light]
+
+- **Enum constants come out as `u32`** (bindgen's default `consts` style), and
+  `#define` integers as `u32` too, where the C uses them as `int`. Cast at the
+  use site to the type the C expression has (`ffi::BLOB_ATTR_LAST as c_int`).
+  Do not bind a header enum as a Rust `enum`: a consumer can store any integer
+  in the field, and an out-of-range discriminant is UB in Rust.
+- **Packed structs and flexible array members:** never form a reference to a
+  packed field (unaligned reference, UB) or to a flexible array field (bindgen's
+  zero-size `__IncompleteArrayField`). Take the field's address with
+  `addr_of!`/`addr_of_mut!` (or `&raw const`/`&raw mut`) and read through the
+  pointer, with `read_unaligned` for packed fields:
+  `addr_of!((*hdr).name) as *const u8`.
+
+## Anchor comments and the harvest
+
+Every ported item carries a `// C:` anchor on the line before it (attributes
+such as `#[no_mangle]` may sit between): `// C: <file>:<name>`, where `<name>`
+is the C function, `static` table or global, or header macro. A data item gets
+an anchor like a function does (`// C: blob.c:blob_type_minlen` on its
+`static`). A label inside a body can follow the name (`// C: tcp.c:tcp_input
+err_free_buf:`). Trailing `// C:` comments inside code explain a line; they are
+not anchors and the harvest ignores them.
+
+The controller harvests `{C_REFERENCE_MAPPING}` with this awk, which pairs each
+anchor with the next `fn`, `static` or `const`, and drops an anchor followed by
+anything else:
+
+```sh
+awk '
+/^[[:space:]]*\/\/ C: / { a = $0; sub(/.*\/\/ C: /, "", a); next }
+a && /^[[:space:]]*(pub[^ ]* )?((unsafe|const|extern "C") )*(fn|static|const) / {
+  match($0, /(fn|static( mut)?|const) [A-Za-z_][A-Za-z0-9_]*/)
+  print FILENAME ":" FNR ": " substr($0, RSTART, RLENGTH) " <-> " a; a = ""; next }
+a && !/^[[:space:]]*(#\[|\/\/|$)/ { a = "" }
+' src/*.rs
+```
+
+On the libubox spike it maps all 39 anchors (37 functions, 2 tables). Compare
+its count with `grep -c '^\s*// C: '`: a difference is an anchor that does not
+sit on an item.
+
+## The API-surface axis (library planks)
+
+In a library plank the public headers are the contract (`library-planks.md`,
+Header contract). Code that touches a header type or signature is [API]: P1
+column only, the bindgen type or an asserted `#[repr(C)]` copy, the C
+signature unchanged. What that rules out:
+
+| Entry | At an [API] boundary |
+|---|---|
+| §1 NULL→`Option` | raw pointers in the signature; `Option<extern fn>` fields OK |
+| §5, §6 tag/state → Rust `enum` | keep the integer field; consumers may store any value |
+| §8 intrusive list → arena/`GhostCell` | forbidden: consumers embed the `list_head` (`uloop_timeout`) |
+| §10 ops struct → trait | keep the fn-pointer field consumers set (`blob_buf.grow`) |
+| §12 `bitflags!` | not on a public field; internal copies only |
+| §13 buffers → slices | pointer + length in the signature (§13 note) |
+| §15 global → `OnceLock` | exported data symbols stay `#[no_mangle] static` (§15) |
+| §16 `container_of` → crate | keep `offset_of!` math on the header layout |
+| §21 `char *` → `CStr`/`&str` | `*const c_char`; no UTF-8 conversion (§21 note) |
+| §22 `Pin`/`pin-init` | forbidden on consumer-allocated structs |
+| ownership → `Box`/`Vec` | libc allocator for anything that crosses (§23) |
+
+Inside a function, past the boundary, the other two axes apply as usual.
 
 ---
 
@@ -404,6 +614,11 @@ Idiomatic does not mean "maximally clever." Leave it alone when:
   `unsafe` shim is the boundary; don't try to make the ABI surface "nice".
 - **`repr(C)` layout matters.** Structs shared with hardware or C must keep their
   exact layout; don't reorder fields for an enum refactor.
+- **An exported data symbol.** A global in a public header stays
+  `#[no_mangle] pub static mut` with the C type (§15). Wrapping it changes
+  what consumers link against.
+- **Anything [API] in a library plank.** See
+  [The API-surface axis](#the-api-surface-axis-library-planks).
 - **A type-level encoding would be write-only.** If the trait bounds needed to
   make something unrepresentable are unreadable to the team, you've traded a
   findable bug for an unmaintainable abstraction. Stay on a lower rung and check

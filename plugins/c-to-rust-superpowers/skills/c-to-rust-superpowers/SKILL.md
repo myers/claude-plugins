@@ -183,8 +183,9 @@ gate**.
 
 The mapping the reviewer needs is a **byproduct of porting**, not a separate artifact:
 
-- The **implementer writes the C-reference anchors as it ports** — `// C: <fn>() <label>:`
-  per `c-to-rust-port`'s anchor-comment convention.
+- The **implementer writes the C-reference anchors as it ports** — `// C: <file>:<name>`
+  on each ported function and data item, per the catalog's *Anchor comments and the
+  harvest*, which also gives the harvest command.
 - The SDD **controller harvests `{C_REFERENCE_MAPPING}` from the task's diff** (greps the
   anchors out of the just-written code) and fills the field of the `faithful-port-reviewer`
   template.
