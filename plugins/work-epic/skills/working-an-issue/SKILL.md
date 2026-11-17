@@ -113,7 +113,8 @@ EOF
   closing status change is the signal — not editing `[ ]` to `[x]`.
 - Do not modify other issues unless your findings genuinely change them.
   When you must, leave a cross-link comment; do not edit their bodies.
-- Do not push — no `git push`, no `iss push`. The orchestrator decides when.
+- Do not push — no `git push`, no `iss push`. The orchestrator decides when;
+  the one exception is a branch push its brief explicitly asks you for.
 - Do not close issues that aren't yours.
 
 ## Return value to the orchestrator

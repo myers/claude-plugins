@@ -68,7 +68,8 @@ code and run no test suites.
 
 ## Project specifics
 
-<Fill from the project's epic-drive doc. Typical entries:>
+<Fill from the project's own drive notes (its CLAUDE.md, the epic's drive
+ruling). Typical entries:>
 
 - Tracker and root, CLAUDE.md files to read, skills to load.
 - The reference to resolve design questions from (a pinned upstream tree, a

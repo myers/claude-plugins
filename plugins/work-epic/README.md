@@ -1,4 +1,4 @@
-# epic-drive
+# work-epic
 
 Drive an epic to done by delegating its issues to subagents, with the
 controller's context spent on the ledger and never on ticket bodies.
@@ -7,15 +7,18 @@ controller's context spent on the ledger and never on ticket bodies.
   pick the oldest unblocked leaf, dispatch one fresh subagent with a fixed
   pointer prompt, check, sync, bar, repeat. Ops files for git-issues (`iss`)
   and Gitea (`gtx`, with `gitea-ledger.sh`).
+- **`working-an-issue` skill** (`skills/working-an-issue/`): what each
+  dispatched subagent follows on its one issue, for either tracker: read,
+  claim, do the work, post the four-section closing comment, change status.
 - **Brief templates** (`skills/work-epic/coder-brief.md`,
   `planner-brief.md`): the project-independent rules for parallel-lane coders
   and planners (whole slice, core first, first test exercises the core,
   prerequisites by struct field, findings fixed-or-notfixed, reviewer
   checklist, block-not-yield on gates, report format, exact-path staging).
   Each ends in a **Project specifics** section the controller fills from the
-  project's own epic-drive doc.
+  project's own drive notes.
 - **`review-loop` workflow** (`workflows/review-loop.js`, run as
-  `/epic-drive:review-loop`): per lane item, optionally code the slice, check
+  `/work-epic:review-loop`): per lane item, optionally code the slice, check
   the diff covers the plan (sending a partial slice back to the coder, twice
   at most), then a fresh-context review, and fix plus re-review until APPROVE
   or the round limit. After a REJECT, items with `code` get the coverage check
@@ -26,7 +29,7 @@ controller's context spent on the ledger and never on ticket bodies.
 
 ```
 /plugin marketplace add myers/claude-plugins
-/plugin install epic-drive@myers-plugins
+/plugin install work-epic@myers-plugins
 ```
 
 Update with `/plugin marketplace update myers-plugins`, then reinstall or
@@ -42,7 +45,7 @@ Pass an object (or a bare `items` array, with no drive settings):
     "preamble": "Text that opens every agent prompt: who dispatched it, the human's authorization, tracker and root.",
     "coderBrief": "/abs/path/to/filled/coder-brief.md",
     "epic": "epic-slug-for-follow-ups",
-    "reviewSkills": ["subagent-working-a-git-issues-issue", "c-to-rust-superpowers:faithful-port-review"],
+    "reviewSkills": ["work-epic:working-an-issue", "c-to-rust-superpowers:faithful-port-review"],
     "reviewRead": "the epic's drive ruling and fixture rules",
     "reviewChecks": ["every fixture in an upstream-reachable state"],
     "gates": ["cargo clippy --workspace --all-targets -- -D warnings", "taskset -c {cpus} cargo nextest run -p <touched crates>"],

@@ -166,19 +166,7 @@
     {
       "name": "work-epic",
       "source": "./plugins/work-epic",
-      "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger.",
-      "keywords": [
-        "epic",
-        "subagents",
-        "git-issues",
-        "gitea",
-        "gtx"
-      ]
-    },
-    {
-      "name": "epic-drive",
-      "source": "./plugins/epic-drive",
-      "description": "Drive an epic to done by delegating its issues to subagents: the work-epic controller skill (git-issues or Gitea), coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds.",
+      "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger. Includes the per-issue worker skill, coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds.",
       "keywords": [
         "epic",
         "orchestration",
@@ -186,7 +174,8 @@
         "workflow",
         "code-review",
         "git-issues",
-        "gitea"
+        "gitea",
+        "gtx"
       ]
     }
   ]

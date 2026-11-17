@@ -1,9 +1,0 @@
-{
-  "name": "epic-drive",
-  "description": "Drive an epic to done by delegating its issues to subagents: the work-epic controller skill (git-issues or Gitea), coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds.",
-  "version": "1.0.0",
-  "author": {
-    "name": "Myers Carpenter",
-    "email": "myers@maski.org"
-  }
-}

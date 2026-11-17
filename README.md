@@ -37,7 +37,6 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 | `cdp-cli` | Chrome DevTools Protocol CLI for inspecting, controlling, and debugging browser pages via CDP. |
 | `code-patterns` | Opinionated code patterns and conventions for Django projects. Loads reference material for writing and reviewing code against established conventions. |
 | `dev-plan` | Interactive planning tool that conducts in-depth interviews to understand requirements before creating detailed implementation plans. |
-| `epic-drive` | Drive an epic to done by delegating its issues to subagents: the work-epic controller skill (git-issues or Gitea), coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds. |
 | `find-block` | Blocks the find command in Bash and suggests using optimized Glob/Grep tools instead. |
 | `fj` | Forgejo CLI for managing issues, PRs, and project boards. Use when working with Forgejo repositories. |
 | `fresh` | Mod adding /fresh <prompt>: clear the conversation, then submit the prompt or /command in place. |
@@ -46,7 +45,7 @@ Install any plugin with `/plugin install <name>@myers-plugins` (Claude Code) or
 | `myers-superpowers` | Fork of Jesse Vincent's superpowers plugin, rewritten to require the AskUserQuestion tool for every user-facing choice. Drop-in replacement for superpowers@claude-plugins-official. |
 | `quest-dev` | Quest stay-awake activity tracking. Sends SIGUSR1 to quest-dev stay-awake process after each tool execution to keep Quest device awake during active sessions. |
 | `rust-correctness-by-construction` | Write Rust where illegal states and concurrency bugs are unrepresentable |
-| `work-epic` | Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger. |
+| `work-epic` | Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger. Includes the per-issue worker skill, coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds. |
 
 <!-- END PLUGINS -->
 

@@ -19,7 +19,11 @@ this task. Follow every rule below.
 - Read each issue yourself with its comments, then the plan file named in
   your brief, then the epic. The epic carries method and corrections from
   prior children.
-- Load the skills the repo's CLAUDE.md requires for work of this shape.
+- Load `working-an-issue` for the tracker commands (read, comment, file a
+  follow-up), plus the skills the repo's CLAUDE.md requires for work of this
+  shape. Where this brief differs from that skill (the lane-branch push, the
+  close policy under **Project specifics**, the report format), this brief
+  wins.
 - **Whole slice.** Your slice is every item the plan lists for it: each
   function and struct, each named test, each deletion. Build the hard,
   coupled part first (the one other items depend on); a self-contained piece
@@ -59,7 +63,8 @@ this task. Follow every rule below.
 
 ## Project specifics
 
-<Fill from the project's epic-drive doc. Typical entries:>
+<Fill from the project's own drive notes (its CLAUDE.md, the epic's drive
+ruling). Typical entries:>
 
 - Tracker and root: <tracker>, run from <path>. CLAUDE.md files to read.
 - Epic rulings to read: <the epic's drive ruling, carry-forward comments>.

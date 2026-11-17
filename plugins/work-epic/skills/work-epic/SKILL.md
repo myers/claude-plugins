@@ -58,8 +58,10 @@ Say it keeps you working across turns without re-prompting, then start round 1.
 4. Run the **bar**. Print it VERBATIM — it ends in ` - <epic-name>`; a bar
    with no name does not say which epic. Go to 1.
 
-Serial only — parallel subagents in one repo collide on git, and you cannot
-tell whether two tickets touch disjoint files without reading their bodies.
+Serial by default — parallel subagents in one checkout collide on git, and
+you cannot tell whether two tickets touch disjoint files without reading
+their bodies. Lanes in separate worktrees are the exception (see **Parallel
+lanes**).
 
 **Done** = the ledger shows no open row except HITL ones, every outside
 blocker worked this drive is closed, AND the epic body's own acceptance
@@ -114,6 +116,34 @@ you cannot name its skills, its gates, or its code repo. Repo-standing
 conventions (git staging, scratch dirs, commit style) are not session
 constraints — the subagent reads those.
 
+## Parallel lanes (only when the human asks for them)
+
+The loop above is serial. When the human rules a drive parallel (lanes in
+separate worktrees, each on its own CPU slice), the controller writes one
+common brief and runs each lane through the plugin's review loop:
+
+- Coder brief: copy [`coder-brief.md`](coder-brief.md) to the drive's scratch
+  dir and fill its **Project specifics** from the project's own drive notes
+  (its CLAUDE.md, the epic's drive ruling). It replaces the dispatch recipe
+  for lane coders. They still load `working-an-issue` for the tracker
+  commands, but a lane coder comments its SHAs and leaves the close to the
+  brief's close policy.
+- Code, plan-coverage check, fresh review and fix rounds per lane: the
+  `/work-epic:review-loop` workflow. Its args shape is in the plugin
+  [README](../../README.md). It returns one verdict per lane: `APPROVE`,
+  `REJECT` (rounds ran out), `INCOMPLETE` (the coder twice shipped a partial
+  slice) or `ERROR`. Anything but `APPROVE` goes to the human or a planner.
+- Status check, sync and bar still run on each lane's return, as in the loop.
+
+## Planning a split
+
+A ticket too big for one coder, or one that keeps coming back partial, goes
+to a planner before another coder, in a serial drive as much as a parallel
+one. Copy [`planner-brief.md`](planner-brief.md), fill its **Project
+specifics** the same way, and dispatch a fresh subagent with it. The planner
+writes a plan and files the split tickets under the epic; they join the
+ledger.
+
 ## Escalation
 
 | Subagent came back with | You do |
@@ -158,6 +188,7 @@ outside ticket. Work that blocker as a round of its own:
 | Held the loop's state in your head | The tracker is the state. Re-read the ledger every round. |
 | Skipped a claimed or `in-progress` leaf as "someone else's" | It is a stalled ticket. Dispatch it; the subagent reads its comments. |
 | Dispatched a HITL ticket (grilling, prototype, ready-for-human) | A subagent cannot speak for the human. Skip it; name it to the user. |
-| A worker built the self-contained part of a ticket (a helper, a buffer API) and reported the coupled core as "remaining" | That is a partial ticket, not progress to bank. Re-dispatch once, naming the missing items by their upstream symbols. If it comes back partial again, the ticket is cut wrong: dispatch a planner to split it core-first, with the hard part in the first slice and a prerequisite check by struct field. |
-| A ticket's comments show the same "remaining" list across several rounds | Each round is doing the easy half. Stop re-dispatching it as-is; plan the split first. |
+| A worker built the self-contained part of a ticket (a helper, a buffer API) and reported the coupled core as "remaining" | That is a partial ticket, not progress to bank. Re-dispatch once, naming the missing items by their upstream symbols. If it comes back partial again, the ticket is cut wrong: dispatch a planner (see **Planning a split**) to split it core-first, with the hard part in the first slice and a prerequisite check by struct field. |
+| A ticket's comments show the same "remaining" list across several rounds | Each round is doing the easy half. Stop re-dispatching it as-is; plan the split first (see **Planning a split**). |
+| Ran tickets in parallel because they looked disjoint | Parallel is the human's ruling, not yours. Serial until they ask; then separate worktrees and the review loop (see **Parallel lanes**). |
 | A goal continuation became a short-wait/status-update loop | Follow **Waiting for a worker**: one long interruptible notification wait, with no status polling or recurring waiting replies. |

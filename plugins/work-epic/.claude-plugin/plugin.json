@@ -1,7 +1,7 @@
 {
   "name": "work-epic",
-  "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger.",
-  "version": "1.1.0",
+  "description": "Drive an epic (git-issues parent or Gitea milestone) to done by dispatching one fresh subagent per issue while the controller holds only the ledger. Includes the per-issue worker skill, coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds.",
+  "version": "1.2.0",
   "author": {
     "name": "Myers Carpenter",
     "email": "myers@maski.org"
