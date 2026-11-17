@@ -26,6 +26,37 @@ It states the target behaviour and the completion criterion, and leaves the
 diagnosis to the agent. Everything repo-specific in it is discovered, not
 configured.
 
+## Watched repos: default branch and landed PRs
+
+A repo can name other repos in a tracked `.ci-watch` file, one `owner/repo`
+per line, `#` comments. The hook reads the nearest one at or above the cwd, so
+a session in a worktree nested inside a workspace reads the workspace's list.
+Per watched repo it checks:
+
+- **Default branch** (`gtx repo view --json defaultBranchRef`): newest
+  finished run per workflow *and event*, so a red nightly (`schedule`) is not
+  hidden by a green or all-skipped `push` run on the same branch.
+- **Landed PRs**: closed PRs merged into the default branch in the last 12
+  hours, and their runs (by head sha, not on the default branch). This catches
+  an informational job that finishes red after a merge queue has already
+  landed the PR on its required set.
+
+```
+CI is red after landing on <slug> (<default>):
+  <workflow> run <id> <conclusion> (<event>), failing: <jobs>
+    landed since last green: git log --first-parent <green>..<red>
+  <workflow> run <id> failure (pull_request), on landed PR #<n> (<head>)[, batch members #a #b]
+
+Search the tracker for a ticket naming the run id before filing one. Then
+launch a subagent to fix it. Logs: ...
+```
+
+"Last green" is the newest older success of the same workflow and event on the
+default branch, asked for per red run, so a once-a-day nightly is found however
+many push runs came after it. Batch members are the `#n` references in the body
+of a `quench/batch/*` PR. Watched repos keep their own state
+(`<slug>#watch.json`) with the same brakes.
+
 ## Discovery
 
 - **Repo.** The git remote whose host matches `gtx config get default.url`,
@@ -56,7 +87,8 @@ the others read the same file and stay quiet. No lock is needed.
 
 A broken watcher exits 0: `gtx` missing, erroring, slow (8-second timeout), or
 unparseable; the cwd not a git repo; a corrupt cache file. Set `CI_WATCH=0` to
-disable it for a session.
+disable it for a session. Watched repos are skipped once the hook has run 20
+seconds (the harness kills it at 30); the next turn picks them up.
 
 ## Testing
 
@@ -68,5 +100,7 @@ tests without a network; the end-to-end tests put a fake `gtx` on `PATH`.
 ## Non-goals
 
 - Re-running workflows. Retrying an infrastructure failure buys nothing.
-- Any branch but the one checked out.
+- Any branch but the one checked out, beyond the default branch and landed PRs
+  of repos in `.ci-watch`.
+- Bisecting a red range. The nudge lists it; the fixer bisects.
 - Judging *why* CI is red. The agent reads the log; the hook only points at it.

@@ -1,5 +1,5 @@
 {
-  "description": "Tells the agent when Gitea Actions CI has gone red on the checked-out branch, at most once per 10 minutes per repo",
+  "description": "Tells the agent when Gitea Actions CI has gone red on the checked-out branch, and on the default branch and landed PRs of repos in .ci-watch, at most once per 10 minutes per repo",
   "hooks": {
     "Stop": [
       {

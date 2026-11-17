@@ -47,8 +47,11 @@ existing ported codebase.
 
 This skill is the **review rung of `c-to-rust-superpowers`**. Dispatch it via the
 sibling `faithful-port-reviewer.md` template to a **fresh subagent given only the
-diff + `{C_REFERENCE_MAPPING}`** — no porter prose, no commit message — so it must
-re-derive the C independently. Its other entry is `remediate` (**sweep mode**),
+diff + `{C_REFERENCE_MAPPING}`** (plus the unchanged wiring the unit relies on) —
+no porter prose, no commit message — so it must re-derive the C independently.
+The diff travels as a **diff-only file**, never pasted inline and never as
+subagent-driven-development's review package, whose `git log --oneline` carries
+the porter's commit subjects. Its other entry is `remediate` (**sweep mode**),
 which audits a whole existing port rather than a single diff.
 
 ## The one move that defines this review
@@ -81,13 +84,13 @@ hardware — *every* port has all five.
 
 **The same five lenses, instantiated per domain** (find your column; the shape is identical):
 
-| | Device driver | Storage / filesystem (e.g. ZFS / Zarn) | Protocol / codec |
-|---|---|---|---|
-| **1** | poll bails on first empty event; HW posts ms later → timeout | I/O completes out of order; checksum-fail → read-the-other-copy repair path; short read; txg ordering | peer NAKs / retransmits / reorders; decoder fed a chunk split mid-token |
-| **2** | device ops-vtable binds `mt792xu_rr`, not generic `mt76u_rr` | checksum / compress / encrypt fn chosen by dataset props; **byteswap variant chosen by on-disk endianness** (a native-endian hardcode is faithful to the *wrong* variant) | wrong message-version handler; wrong cipher mode for the negotiated suite |
-| **3** | DMA ring base programmed into a register, then reallocated / moved | **block-pointer checksum captured, then the block re-encoded / compressed before write**; a dnode held by object-id across an eviction / realloc | length or CRC computed over a frame that is edited afterward |
-| **4** | `reset_device` bundles port-reset + Reset-Device + re-address + descriptor-reread + SET_CONFIG **linearly**; reference splits it across the hub driver + a `usb_set_device_state`-driven callback (Reset Device only on the `POWERED` transition, `if state != DEFAULT`) + `xhci_set_address` (a `switch (hdev->state)`) + the USB core. The dropped `trb_halted=1; trb_running=0` EP0 re-arm (lived in `xhci_set_address`) → every EP0 control SETUP `XACT_ERR` after reset | a txg / transaction / multi-phase-commit state machine flattened; a step the reference runs **only** in a specific txg state run every pass (or a quiesce/sync barrier between phases dropped because the linear version "doesn't need it") | a connection state machine (LISTEN→SYN-RCVD→ESTABLISHED→CLOSING) collapsed; a segment handled identically regardless of negotiated state, or a handshake step skipped because the happy path reached the next state anyway |
-| **5** | C keeps `devs[slot].endp[epno]`, port uses `eps[ep_addr]`; per-endpoint `trb_halted`, port uses one global bit; hub child slot not tied to parent unplug | C keys buffers/locks/checksums by dataset/object/txg, port keys by block number only; eviction of one object frees another object's state | C keys stream state by `(peer, stream_id)` or negotiated message version, port keys by stream id only |
+| | Device driver | Storage / filesystem (e.g. ZFS / Zarn) | Protocol / codec | Library API (library plank) |
+|---|---|---|---|---|
+| **1** | poll bails on first empty event; HW posts ms later → timeout | I/O completes out of order; checksum-fail → read-the-other-copy repair path; short read; txg ordering | peer NAKs / retransmits / reorders; decoder fed a chunk split mid-token | a consumer callback fails or re-enters the library; `malloc`/`realloc` returns NULL; the error a consumer sees (return value, errno, partial buffer state) differs from C's |
+| **2** | device ops-vtable binds `mt792xu_rr`, not generic `mt76u_rr` | checksum / compress / encrypt fn chosen by dataset props; **byteswap variant chosen by on-disk endianness** (a native-endian hardcode is faithful to the *wrong* variant) | wrong message-version handler; wrong cipher mode for the negotiated suite | the library calls its own default where C calls the **consumer-set fn pointer** (`blob_buf.grow`, `uloop_*_handler`); a Rust copy of a header inline the consumers never run |
+| **3** | DMA ring base programmed into a register, then reallocated / moved | **block-pointer checksum captured, then the block re-encoded / compressed before write**; a dnode held by object-id across an eviction / realloc | length or CRC computed over a frame that is edited afterward | `struct blob_attr *` handed to a consumer points into `buf->buf`, which `blob_buffer_grow` `realloc`s (`blob.c:36`): the Rust must keep such pointers valid exactly as long as C does, and move the buffer exactly when C does |
+| **4** | `reset_device` bundles port-reset + Reset-Device + re-address + descriptor-reread + SET_CONFIG **linearly**; reference splits it across the hub driver + a `usb_set_device_state`-driven callback (Reset Device only on the `POWERED` transition, `if state != DEFAULT`) + `xhci_set_address` (a `switch (hdev->state)`) + the USB core. The dropped `trb_halted=1; trb_running=0` EP0 re-arm (lived in `xhci_set_address`) → every EP0 control SETUP `XACT_ERR` after reset | a txg / transaction / multi-phase-commit state machine flattened; a step the reference runs **only** in a specific txg state run every pass (or a quiesce/sync barrier between phases dropped because the linear version "doesn't need it") | a connection state machine (LISTEN→SYN-RCVD→ESTABLISHED→CLOSING) collapsed; a segment handled identically regardless of negotiated state, or a handshake step skipped because the happy path reached the next state anyway | a multi-call API (`blob_nest_start` … `blob_nest_end`) whose struct state a consumer reads between calls, updated at a different call than C updates it |
+| **5** | C keeps `devs[slot].endp[epno]`, port uses `eps[ep_addr]`; per-endpoint `trb_halted`, port uses one global bit; hub child slot not tied to parent unplug | C keys buffers/locks/checksums by dataset/object/txg, port keys by block number only; eviction of one object frees another object's state | C keys stream state by `(peer, stream_id)` or negotiated message version, port keys by stream id only | per-object state (per `blob_buf`, per `uloop_fd`) moved into a Rust `static`, so two consumer objects alias; or an exported global (`uloop_cancelled`) made per-object, so consumers stop seeing it |
 
 These share a root: **the divergence is invisible to a mock and has no confession
 in the code.** Do not wait for a comment to warn you.
@@ -129,6 +132,13 @@ the untrimmed buffer's zero pad then parsed as a hidden-SSID IE on silicon and
 blanked every scanned network's SSID. Walking the C call graph from
 `mt76u_rx_worker` finds the missing counterpart in one step.
 
+**Library plank:** the work list is every function defined in the library's
+`.c` files, file-local `static` ones included, entered from the exported
+symbols the diff touches. Header `static inline` functions and macros are a
+contract that stays C, so a header inline with no Rust counterpart is the
+expected state, not a dropped unit. A Rust expansion of a header macro
+(anchored `// C: blob.h:blob_for_each_attr`) is a port: review its structure.
+
 ## Checklist
 
 Walk the C reference's call graph as above, mapping each C function to its
@@ -147,6 +157,75 @@ never decay into "skim for obvious bugs."
 6. **Dropped/added/reordered steps** — a "tidy helper" that drops or reorders a reference step (a barrier, a re-read, a second write, a checksum-after-transform) is a divergence.
 7. **Error/edge semantics** — short reads, retries, terminal vs transient errors mapped as the reference maps them.
 8. **Structure / state-machine fidelity (class 4)** — does each ported function map to *one* reference function? A function assembled from pieces of several (no single counterpart) has no oracle. Where the reference is a `switch (state)`, a callback fired on a state transition, or behavior split across layers, the port must preserve that gating/layering — not run the steps straight-line and unconditional.
+
+## Library lens (library planks)
+
+Apply this lens when the port is a **library plank**: a C shared library
+replaced by Rust one unit at a time while C consumers keep linking it (see
+`c-to-rust-port`'s `references/library-planks.md`). The gate's dispatch says
+whether it is one.
+
+**The counterpart is the C consumers, compiled against the upstream headers.**
+The oracle is the pure-C build of the same library, not a mock, so the
+mock-versus-silicon framing above does not apply. "Ship" means the release
+gates (exports, linkage, size, oracle) pass, plus the cross-target oracle at
+release. What a consumer observes is the **boundary**: return values, errno,
+the bytes and struct fields it reads after a call (header inlines included),
+the callbacks fired and their order, and which memory it may then `free()`.
+Device-shaped checks (emit wrapper, transport-boundary assertion) apply only
+where the library itself frames bytes; elsewhere skip them, do not invent a
+finding. Run every check below in addition to the checklist:
+
+1. **Header ↔ symbol mapping.** For each exported symbol the unit defines, pair
+   the header declaration with its `#[no_mangle]` Rust item: name, `extern "C"`,
+   every parameter and return type (the bindgen type, not a retyped one),
+   `const`-ness, and for an exported data symbol the header type and the C
+   initial value (`#[no_mangle] static mut`). A mismatch is CRITICAL: every
+   consumer compiled against the header calls it wrong.
+2. **Exports and layouts.** The exported symbol set and versions, SONAME and
+   `DT_NEEDED` must equal the C build's (the release-gate output in the
+   dispatch). Every header struct the Rust touches uses the bindgen type or a
+   `#[repr(C)]` copy with `size_of`/`align_of`/`offset_of!` asserts against it.
+   A missing assert on a consumer-visible struct is IMPORTANT.
+3. **[API] axis.** At a header boundary only the catalog's P1 column applies
+   (`translation-catalog.md`, *The API-surface axis*). A P2 upgrade there (an
+   `Option`, an `enum` field, a slice or `&str` in the signature, `Pin`, a
+   trait in place of a consumer-set fn pointer) changes what consumers see:
+   it is a divergence, not CbC oxidation.
+4. **Allocator identity.** No runtime test can catch it: Rust's System
+   allocator *is* malloc, so a consumer's `free()` of a `Box` passes every
+   test. Enforce it from the source. Run
+   `grep -nE '\b(Box|Vec|String|CString)\b|alloc::|global_allocator' <ported unit files>`;
+   memory that crosses the boundary must come from libc
+   `malloc`/`realloc`/`free` through bindgen, called where the C calls them
+   (catalog §23). A hit on memory a consumer frees or reallocs, or on a
+   consumer-owned buffer the library reallocs, is CRITICAL; any other hit is
+   IMPORTANT (it breaks the `no_std`, no-`alloc` default).
+5. **Integer conversions.** Check every conversion against catalog §25: the
+   usual arithmetic conversions, promotion of `u8`/`u16` to `int`,
+   sign-extension of `int` into `size_t`, truncation where C assigns or
+   returns. Compute both sides for a negative and for a huge input; a
+   widening to `i64` or `usize` that C does not do is the typical bug.
+6. **Build profile.** Read `Cargo.toml` before grading an overflow finding,
+   because the profile decides whether it is real. `overflow-checks` must be
+   the same in dev and release, and `panic = "abort"` in both; `wrapping_*`
+   wherever C wraps (all unsigned arithmetic, and signed ops that reproduce
+   compiler-defined UB). Plain `+` on a C-derived integer with
+   `overflow-checks` differing between profiles is IMPORTANT: it panics in dev
+   and wraps in release, and the oracle builds release.
+7. **UB in the C.** Grade each case against the ladder in `library-planks.md`:
+   compiler-defined UB → a defined op (`wrapping_*`, `wrapping_offset`) that
+   gives the same result; an out-of-bounds access where Rust has the bound →
+   Rust's check traps; a bound Rust cannot know → C's behaviour kept
+   identical inside `unsafe`. **Any invented guard is a finding** (IMPORTANT):
+   it returns a value the C never defines, so it is a new API. A guard upstream
+   added is not invented.
+8. **Exceptions ledger.** The unit's new or changed `DIVERGENCES.md` entries
+   are part of the diff. Re-derive each C-behaviour and Evidence claim from the
+   C yourself; a false claim is IMPORTANT, since no test can catch wrong prose.
+   A divergence with no entry is a finding at its own severity; an unledgered
+   `stack` divergence (alloca or VLA → fixed array) is IMPORTANT. An `as`
+   chain that reproduces C exactly needs no entry: do not flag its absence.
 
 ## Tolerating correct-by-construction oxidation
 
@@ -243,8 +322,10 @@ gaps**, and report them in a SEPARATE `METHOD GAPS` block, distinct from
   heavy oxidation is *earned* on a cold, frozen file, **not** on a hot one. The
   same `[D-heavy]` oxidation on a file with one commit ever is NOT a gap — judge
   it by the reference's churn, not by the oxidation alone.
-- **Missing anchor.** A ported unit with no **harvestable** `// C: <fn>() <label>:`
-  anchor comment tying it back to the reference. Two harms, two scopes:
+- **Missing anchor.** A ported unit (function, `static` table or global, or
+  header-macro expansion) with no **harvestable** `// C: <file>:<name>` anchor
+  on the line before it (format and awk harvest: `c-to-rust-port`'s catalog,
+  *Anchor comments and the harvest*). Two harms, two scopes:
   - **`[D-heavy]` region (resync landing point).** When the upstream diff lands, a
     heavily re-architected region with no anchor gives the resync **no landing
     point** — the next porter cannot find where the C function went. `[D-heavy]`
@@ -307,7 +388,7 @@ MAYBE CbC / justified  (look like divergence. behavior same. NOT bug)
 - `file:line` vs `ref.c:fn:line`. why same bytes. (ask as question, not Critical)
 
 VERDICT
-ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / interop)
+ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / interop; library plank = release gates + oracle)
 
 NOT REACHED  (reference no find / no read. so sweep no lie "all done")
 - ...
@@ -320,7 +401,7 @@ divergence review; never fold gaps into `DIVERGENCES`):
 METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 - MISSING PROVE-TEST. `unit` (ports `ref.c:fn`). no behavior-pin test. no oracle.
 - OVER-OXIDIZE HOT FILE. `file:line` [D-heavy] on `ref.c` (hot: N commit/month). resync cost.
-- MISSING ANCHOR. `file:line` ports `ref.c:fn`. no greppable `// C: fn() label:` (prose-only no count). gate-harvest no land. ([D-heavy] also = resync no landing.)
+- MISSING ANCHOR. `file:line` ports `ref.c:fn`. no greppable `// C: <file>:<name>` (prose-only no count). gate-harvest no land. ([D-heavy] also = resync no landing.)
 
 (empty -> "no method gap found")
 ```
@@ -340,6 +421,7 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 - You reviewed functions but never inventoried persistent state ownership. If the C keeps state under `devs[slot].endp[epno]` and Rust uses `eps[ep_addr]`, every function can look locally faithful while the driver aliases two devices.
 - You trusted a single-device / single-object mock to prove a state key. It cannot. Every retained state field needs a smallest two-object alias scenario.
 - You decided a lens "doesn't apply to this domain" — all five lenses apply to every port; only the *instance* changes. Find the instance, don't drop the lens.
+- On a **library plank**, you graded function bodies but never paired each header declaration with its `#[no_mangle]` symbol, checked the exports and layouts, or grepped the ported files for `Box`/`Vec`/`String`/`alloc::`.
 
 ## Rationalization table
 
@@ -354,4 +436,7 @@ METHOD GAPS  (method debt. port faithful now. cost later. NOT divergence)
 | "The map key is fine; tests only have one device/object." | That proves nothing. Map the C owner/key to the Rust owner/key and name the two-object alias case. A single-object mock cannot catch identity-scope collapse. |
 | "Re-allocating the ring / re-checksumming after the transform is cleaner." | The reference (device pointer, *or the stored checksum*) was captured over the old bytes. Cleaner code, dangling reference. |
 | "I combined three reference functions into one clean routine." | A function with no single `ref.c:fn` counterpart has no oracle (class 4). The reference's layering / `switch (state)` / state-transition callback **is** the behavior — flattening it drops ordering and conditionality the mock can't catch. Port per-function; compose with the same structure. |
+| "The System allocator is malloc, so returning a `Box` to a consumer is fine." | It works today and passes every test, which is why only the source grep catches it. Memory a consumer frees comes from libc `malloc`, called where C calls it. |
+| "The C is UB here, so a bounds check is strictly safer." | A guard returns a value the C never defines: a new API, not a port. Follow the UB ladder; a guard arrives only when upstream adds it. |
+| "Overflow can't happen; the oracle is green." | The oracle builds release. With the cargo defaults, release wraps where dev panics. Check `overflow-checks` and `wrapping_*` before grading. |
 | "It's just internal bookkeeping (`trb_halted=1`), safe to drop." | The one-liner you can't immediately explain is exactly what a "tidy" port drops and exactly the whole bug. Keep every reference step until a *written* reason clears it — a step you don't understand is a step you must keep, not delete. |

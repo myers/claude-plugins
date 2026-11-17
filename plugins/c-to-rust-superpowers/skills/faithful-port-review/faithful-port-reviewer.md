@@ -25,7 +25,9 @@ Subagent (general-purpose):
 
     ## Load the skill first
 
-    Before reviewing, load and follow the `faithful-port-review` skill. It
+    Before reviewing, read and follow the `faithful-port-review` skill at
+    `{SKILL_PATH}` (read the file; do not load the skill by name, which can
+    pick up a stale cached version). It
     defines the five recurring divergence classes, the correct-by-construction
     (CbC) oxidation tolerance, and the caveman / divergences-only output format
     you MUST use. This prompt does not restate the skill — it dispatches you
@@ -36,13 +38,19 @@ Subagent (general-purpose):
 
     **Base:** {BASE_SHA}
     **Head:** {HEAD_SHA}
+    **Diff file:** {DIFF_FILE}
 
-    ```bash
-    git diff --stat {BASE_SHA}..{HEAD_SHA}
-    git diff {BASE_SHA}..{HEAD_SHA}
-    ```
+    Read the diff from the file. It holds the diff only. Do not run
+    `git log` or read commit messages in the range: they are the porter's
+    prose. To read a file at head, use `git show {HEAD_SHA}:<path>`.
 
-    {DIFF}
+    ## Wiring this unit relies on
+
+    Files the unit depends on that this diff does not change (a C shim, the
+    export map, build lines, the bindgen invocation). Read them; review them
+    only where the unit relies on them.
+
+    {WIRING}
 
     ## C reference mapping
 
@@ -116,7 +124,8 @@ Subagent (general-purpose):
        bundle drops — and exactly the whole bug. The mock has no state machine to
        violate, so the bundle passes green.
 
-    9. **Emit-wrapper completeness + sibling-path divergence** — when the
+    9. **Emit-wrapper completeness + sibling-path divergence** (library plank:
+       only where the library frames bytes itself) — when the
        reference funnels a whole CLASS of operations through **one** wrapper
        (every MCU command → `mt7921u_mcu_send_message` = `fill_message` →
        `add_usb_sdio_hdr` → pad → `bulk_msg`; every block → `bio_submit`; every
@@ -134,6 +143,42 @@ Subagent (general-purpose):
        USB SDIO header + pad the download-send applied; every steady-state command
        was mis-framed and crashed the firmware, while the green mock — asserting
        the pre-frame builder output — saw nothing.)
+
+    ## Library plank
+
+    {LIBRARY_PLANK}
+
+    If the line above is not `no`, the port is a library plank: run the skill's
+    **Library lens** on top of the checks above. The counterpart is the C
+    consumers compiled against the upstream headers; the oracle is the pure-C
+    build, not a mock. The boundary is what a consumer observes: return values,
+    errno, the bytes and fields it reads after a call, callbacks fired, which
+    memory it may `free()`. Item 9 and the assertion-boundary check apply only
+    where the library frames bytes itself. In short:
+
+    - **Header ↔ symbol:** each header declaration matches its `#[no_mangle]`
+      item (name, `extern "C"`, bindgen types, `const`-ness; data symbols: type
+      and C initial value). Mismatch = CRITICAL.
+    - **Exports and layouts:** the release-gate output above equals C's;
+      consumer-visible structs are bindgen types or asserted `#[repr(C)]` copies.
+    - **[API] axis:** P1 only at a header boundary; a P2 upgrade there is a
+      divergence, not CbC.
+    - **Allocator identity:** grep the ported files for
+      `\b(Box|Vec|String|CString)\b|alloc::|global_allocator`. Memory that
+      crosses the boundary is libc `malloc`/`realloc`/`free`. Crossing hit =
+      CRITICAL, other hit = IMPORTANT. No test can see this.
+    - **Integer conversions:** promotion, usual arithmetic conversions,
+      sign-extension into `size_t`, truncation on assignment; compute for a
+      negative and a huge input.
+    - **Build profile:** `overflow-checks` equal in dev and release,
+      `panic = "abort"` in both, `wrapping_*` wherever C wraps. Read
+      `Cargo.toml` before grading an overflow finding.
+    - **UB in the C:** compiler-defined UB → defined op; Rust has the bound →
+      trap; can't know → identical in `unsafe`. Any invented guard = IMPORTANT.
+    - **Ledger:** new/changed `DIVERGENCES.md` entries are in the diff.
+      Re-derive each C-behaviour and Evidence claim; false claim = IMPORTANT.
+      Unledgered divergence = finding at its own severity; unledgered `stack`
+      = IMPORTANT. Exact `as` chains need no entry.
 
     ## Tolerate correct-by-construction oxidation — but verify, do not trust
 
@@ -216,7 +261,7 @@ Subagent (general-purpose):
     - `file:line` vs `ref.c:fn:line`. why same bytes. (ask as question, not Critical)
 
     VERDICT
-    ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / interop)
+    ship/merge? [No | with fixes | Yes]. why short.   (ship = silicon / prod / interop; library plank = release gates + oracle)
 
     NOT REACHED  (reference no find / no read. so sweep no lie "all done")
     - ...
@@ -250,12 +295,17 @@ Subagent (general-purpose):
       bytes at the transport boundary, not an inner builder's return.
     - You padded with a "verified faithful" list, preamble, or praise, or you
       caveman-compressed a `file:line` / mask / offset / wire byte.
+    - On a library plank, you graded function bodies only: no header ↔ symbol
+      pairing, no exports/layout check, no allocator grep.
 ```
 
 **Placeholders:**
+- `{SKILL_PATH}` — absolute path of `faithful-port-review/SKILL.md` in the plugin version the controller verified (see `c-to-rust-superpowers`, *The review gate*: template by path, version check).
 - `{BASE_SHA}` — starting commit of the port under review.
 - `{HEAD_SHA}` — ending commit.
-- `{DIFF}` — the `git diff {BASE_SHA}..{HEAD_SHA}` output (the changed port units). The controller pastes it inline so the subagent reviews exactly this range.
-- `{C_REFERENCE_MAPPING}` — one line per changed Rust unit: `rust_file.rs:fn ↔ ref_path:fn`. The controller **harvests this from the `// C:` anchors in the diff** (each ported unit carries a `// C: <ref_path>:<fn>` comment). If a unit has no greppable anchor — only **prose** ties it to the reference (a doc-comment "Mirrors FreeBSD `foo()`"), as is typical of a **pre-skill / `remediate` port** — the controller resolves and adds the mapping line from the prose so the gate can still run, **but must also (1) report it as `MISSING ANCHOR` in the sweep's `METHOD GAPS` block and (2) back-fill the real `// C:` anchor into the code** — a hand-resolved anchor is method debt, not a free pass (see `c-to-rust-superpowers` D3). Any unit whose reference cannot be located at all is listed so the reviewer logs it under NOT REACHED.
+- `{DIFF_FILE}` — absolute path of a file holding `git diff {BASE_SHA}..{HEAD_SHA}` and nothing else: no `git log`, no commit subjects. Do not hand over subagent-driven-development's review package; its `git log --oneline` leaks the porter's prose. A file, not inline, so the diff stays out of the controller's context.
+- `{WIRING}` — pre-existing files the unit relies on but the diff does not change (C shim, `exports.map`, build-system lines, bindgen invocation, `Cargo.toml` profiles): path plus the relevant lines, or `none`.
+- `{LIBRARY_PLANK}` — `no` unless the target is a library C consumers link. If it is: the headers whose inlines and macros stay C (from the plan), and this unit's release-gate output against the pure-C build (exports and versions, SONAME and `DT_NEEDED`, stripped size ratio, oracle result).
+- `{C_REFERENCE_MAPPING}` — one line per changed Rust unit (function, `static`/`const`, header-macro expansion): `rust_file.rs:item ↔ ref_path:name`. The controller **harvests this from the `// C: <file>:<name>` anchors in the diff** with the awk in `c-to-rust-port`'s catalog, *Anchor comments and the harvest*. If a unit has no greppable anchor — only **prose** ties it to the reference (a doc-comment "Mirrors FreeBSD `foo()`"), as is typical of a **pre-skill / `remediate` port** — the controller resolves and adds the mapping line from the prose so the gate can still run, **but must also (1) report it as `MISSING ANCHOR` in the sweep's `METHOD GAPS` block and (2) back-fill the real `// C:` anchor into the code** — a hand-resolved anchor is method debt, not a free pass (see `c-to-rust-superpowers` D3). Any unit whose reference cannot be located at all is listed so the reviewer logs it under NOT REACHED.
 
 **Reviewer returns:** DIVERGENCES (CRITICAL / IMPORTANT / MAYBE-CbC), VERDICT, NOT-REACHED — caveman voice, divergences only.

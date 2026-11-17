@@ -155,7 +155,7 @@
     {
       "name": "gitea-actions",
       "source": "./plugins/gitea-actions",
-      "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, read through gtx.",
+      "description": "Stop hook that reports red Gitea Actions CI on the checked-out branch, and on the default branch and landed PRs of repos in .ci-watch, read through gtx.",
       "keywords": [
         "hooks",
         "ci",
@@ -173,6 +173,20 @@
         "git-issues",
         "gitea",
         "gtx"
+      ]
+    },
+    {
+      "name": "epic-drive",
+      "source": "./plugins/epic-drive",
+      "description": "Drive an epic to done by delegating its issues to subagents: the work-epic controller skill (git-issues or Gitea), coder and planner brief templates, and a review-loop workflow that takes each parallel lane through code, plan-coverage check, fresh review and fix rounds.",
+      "keywords": [
+        "epic",
+        "orchestration",
+        "subagents",
+        "workflow",
+        "code-review",
+        "git-issues",
+        "gitea"
       ]
     }
   ]
